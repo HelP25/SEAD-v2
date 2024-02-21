@@ -1,15 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-if __name__ != "__main__":
-    # import os
-    os.chdir(os.path.join(os.getcwd(), 'SEAD-v2'))
-
-from SEAD_v2.Assets import Aircrafts
-from Optimise import *
-
-
-
+from SEAD_v2.Optimise import *
+from SEAD_v2.Optimise.Safe_corridor import GA_corridor
 
 plt.close('all')
 
