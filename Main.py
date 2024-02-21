@@ -1,7 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Assets import *
+
+if __name__ != "__main__":
+    # import os
+    os.chdir(os.path.join(os.getcwd(), 'SEAD-v2'))
+
+from SEAD_v2.Assets import Aircrafts
 from Optimise import *
+
+
+
 
 plt.close('all')
 
@@ -28,7 +36,7 @@ print(radar1.detection(F16,[EA18G, EA6B]))
 '''
 
 #Scénario
-"""
+
 radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
@@ -48,21 +56,22 @@ jammer4 = Jammer(450, 750)
 jammer5 = Jammer(490, 500)
 
 #Test
-radar3.targeted_by([jammer1])
-radar4.targeted_by([jammer2])
-radar5.targeted_by([jammer3])
-radar6.targeted_by([jammer4])
-radar9.targeted_by([jammer5])
+# radar3.targeted_by([jammer1])
+# radar4.targeted_by([jammer2])
+# radar5.targeted_by([jammer3])
+# radar6.targeted_by([jammer4])
+# radar9.targeted_by([jammer5])
 
 
 
 print(corridor_width(striker, 2))
-print(any_detection(20))
-print(means_cost())
-print(safe_distance())
-print(time_constraint(100, 400))
+#print(any_detection(20))
+#print(means_cost())
+#print(safe_distance())
+#print(time_constraint(100, 400))
 #plt.legend()
+
 plt.show()
-"""
+
 
 

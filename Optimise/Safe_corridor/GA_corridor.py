@@ -97,18 +97,18 @@ class GeneticAlgorithm:
         best_individual = max(self.population, key=lambda ind: ind.fitness)
         print(f"Best individual: {best_individual.genome}, Fitness: {best_individual.fitness}")
 
-
-#Test
-striker = aircraft(573,702)
-radar1 = sensor_iads(600, 300)
-radar2 = sensor_iads(700, 400)
-radar3 = sensor_iads(650, 550)
-radar4 = sensor_iads(750, 550)
-radar5 = sensor_iads(550, 650)
-
-ga = GeneticAlgorithm(4, striker, 2, 100, 0.1, 65, 20)
-genome = ga.create_random_genome()
-ga.fitness(genome)
-print(len(Jammer.list))
+#
+# #Test
+# striker = aircraft(573,702)
+# radar1 = sensor_iads(600, 300)
+# radar2 = sensor_iads(700, 400)
+# radar3 = sensor_iads(650, 550)
+# radar4 = sensor_iads(750, 550)
+# radar5 = sensor_iads(550, 650)
+#
+# ga = GeneticAlgorithm(4, striker, 2, 100, 0.1, 65, 20)
+# genome = ga.create_random_genome()
+# ga.fitness(genome)
+# print(len(Jammer.list))
 
 
