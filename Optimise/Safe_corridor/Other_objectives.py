@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Assets import *
+from SEAD_v2.Assets import *
 
 def any_detection(weight):
     """

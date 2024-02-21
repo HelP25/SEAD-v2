@@ -1,5 +1,5 @@
-from Assets import *
-from Optimise.Safe_corridor import *
+from SEAD_v2.Assets import *
+from SEAD_v2.Optimise.Safe_corridor import *
 import random
 
 class GeneticAlgorithm:
