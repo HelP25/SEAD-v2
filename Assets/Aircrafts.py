@@ -19,9 +19,10 @@ class aircraft:
         self.Y = Y
         self.coordinates = [self.X, self.Y]
         self.target = None
-        self.point, = plt.plot(self.X, self.Y, point, markersize=10, label=self.color)
         aircraft.list += [self]
         self.name = f'aircraft{len(aircraft.list)}'
+        self.point, = plt.plot(self.X, self.Y, point, markersize=10, label=self.name)
+
 
     def update(self,x = None,y = None):#to update the position of the aircraft on the map if it moved
         if x is None:

@@ -8,11 +8,12 @@ def any_detection(weight):
     :param weight: how much the value of the function is increased when the assets or not detected
     :return: the value of the objective function
     """
+    total = 1
     for radar in sensor_iads.list:
         for aerial_vehical in aircraft.list:
             if radar.detection(aerial_vehical, radar.jammers_targeting):
-                return 0
-    return weight
+                total += weight
+    return total
 
 def means_cost():
     return len(sensor_iads.list) - len(Jammer.list)

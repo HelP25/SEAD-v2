@@ -21,9 +21,9 @@ class sensor_iads:
         self.Y = Y
         self.jammers_targeting = []
         self.coordinates = [X,Y]
-        self.point, = plt.plot(self.X,self.Y,'bs', markersize=10, label='Radar')
         sensor_iads.list += [self]
         self.name = f'radar{len(sensor_iads.list)}'
+        self.point, = plt.plot(self.X,self.Y,'bs', markersize=10, label=self.name)
 
     def update(self,x = None,y = None):#allows to update the position of the asset when its coordinates are modified
         if x is None:#we can modify only the absissa
@@ -51,8 +51,6 @@ class sensor_iads:
 
     #Function that calculates the range of the sensor, either or not it has been jammed
     def get_detection_range(self, aircraft, jammers = None):
-        print(self)
-        print(jammers)
         #Calculation of the range
         # Range when the jammer is the aircraft to keep out of the detection range of the radar
         # detection_range = ((from_dB(self.Pt) * from_dB(self.G)**2 * aircraft.rcs * from_dB(self.l)**2)
@@ -65,7 +63,6 @@ class sensor_iads:
                      / ((4 * np.pi) ** 3 * from_dB(self.L) * from_dB(self.F) * 1.38e-23 * self.Br
                         + self.jamming_power(jammers))) ** 0.25 / 1000
         # Outline of the range
-        print(detection_range)
         theta = np.linspace(0, 2 * np.pi, 100)
         x = self.X + detection_range * np.cos(theta)
         y = self.Y + detection_range * np.sin(theta)

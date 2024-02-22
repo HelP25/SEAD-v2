@@ -3,11 +3,9 @@ from SEAD_v2.Optimise.Safe_corridor import *
 import random
 
 class GeneticAlgorithm:
-    def __init__(self, nb_jammers, aircraft_secured, security_width, population_size, chance_to_mutate, graded_retain_percent, chance_retain_non_graded):
+    def __init__(self, nb_jammers, aircraft_secured, security_width, population_size, chance_to_mutate):
         self.population_size = population_size
         self.chance_to_mutate = chance_to_mutate
-        self.graded_retain_percent = graded_retain_percent
-        self.chance_retain_non_graded = chance_retain_non_graded
         self.nb_jammers = nb_jammers
         self.aircraft_secured = aircraft_secured
         self.security_width = security_width
@@ -28,53 +26,51 @@ class GeneticAlgorithm:
         return genome
 
     def select_individuals(self):
-        tournament_size = 2
-        tournament_individuals = random.sample(self.population, tournament_size)
-        graded_individuals = sorted(tournament_individuals, key=lambda ind: ind.fitness, reverse=True)
+        total_fitness = sum(self.fitness(individual) for individual in self.population)
+        min_fitness = min(self.fitness(individual) for individual in self.population)
+        graded_individuals = random.choices(self.population,
+                                            weights=[abs((self.fitness(individual) - min_fitness)/ total_fitness) for individual in self.population],
+                                            k=self.population_size) # can draw many times the same individual
 
-        # Retain a percentage of the best individuals
-        retain_count = int(self.graded_retain_percent * self.population_size / 100)
-        graded_individuals = graded_individuals[:retain_count]
-
-        # Retain a percentage of the non-graded individuals
-        non_graded_count = int(self.chance_retain_non_graded * self.population_size / 100)
-        non_graded_individuals = [ind for ind in self.population if ind not in graded_individuals]
-        non_graded_individuals = sorted(non_graded_individuals, key=lambda ind: ind.fitness, reverse=True)
-        graded_individuals.extend(non_graded_individuals[:non_graded_count])
         return graded_individuals
 
     def crossover(self, P1, P2):
-        C1 = []
-        C1.append(P1[0])
-        C1.append(P2[1])
-        radars = sensor_iads.list.copy()
-        radars.remove(P1[-1])
-        C1.append(random.choice(radars))
-        C2 = []
-        C2.append(P2[0])
-        C2.append(P1[1])
-        radars = sensor_iads.list.copy()
-        radars.remove(P2[-1])
-        C2.append(random.choice(radars))
+        C1 = [[] for i in range(self.nb_jammers)]
+        C2 = [[] for i in range(self.nb_jammers)]
+        for i in range(self.nb_jammers):
+            C1[i].append(P1[i][0])
+            C1[i].append(P2[i][1])
+            radars = sensor_iads.list.copy()
+            radars.remove(P1[i][-1])
+            C1[i].append(random.choice(radars))
+            C2[i].append(P2[i][0])
+            C2[i].append(P1[i][1])
+            radars = sensor_iads.list.copy()
+            radars.remove(P2[i][-1])
+            C2[i].append(random.choice(radars))
         return C1,C2
 
-    def mutation(self, jammer_vector):
-        new_vector = []
+    def mutation(self, individual):
+        new_vector = [[] for i in range(self.nb_jammers)]
         if random.random() < self.chance_to_mutate:
-            for i in range(len(jammer_vector) -1):
-                strnb = str(jammer_vector[i])
-                strnb = strnb[::-1]
-                new_vector.append(int(strnb))
-            new_vector.append(jammer_vector[-1])
+            for i in range(self.nb_jammers):
+                for j in range(len(individual[i]) - 1):
+                    strnb = str(individual[i][j])
+                    strnb = strnb[::-1]
+                    new_vector[i].append(int(strnb))
+                new_vector[i].append(individual[i][-1])
         else:
-            new_vector = jammer_vector.copy()
+            new_vector = individual.copy()
         return new_vector
 
     def fitness(self, genome):
-        for i in range(len(Jammer.list)):
-            Jammer.list[i].update(genome[i][0], genome[i][0])
-            Jammer.list[i].targets(genome[i][2])
-        fitness = corridor_width(self.aircraft_secured, self.security_width) * any_detection(1)
+        for i, jammer in enumerate(Jammer.list):
+            jammer.update(genome[i][0], genome[i][1])
+            jammer.targets(genome[i][2])
+        fitness = corridor_width(self.aircraft_secured, self.security_width) - any_detection(30)
+        for radar in sensor_iads.list:
+            radar.jammers_targeting = []
+        return fitness
 
 
 
@@ -82,7 +78,7 @@ class GeneticAlgorithm:
         graded_individuals = self.select_individuals()
         new_population = []
         while len(new_population) < self.population_size:
-            parent1, parent2 = random.sample(graded_individuals, 2)
+            parent1, parent2 = random.sample(graded_individuals, 2)# Once the individual is picked, it is removed from the
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
@@ -94,21 +90,8 @@ class GeneticAlgorithm:
         for _ in range(generations_count):
             self.next_generation()
         # Find the best individual in the final population
-        best_individual = max(self.population, key=lambda ind: ind.fitness)
-        print(f"Best individual: {best_individual.genome}, Fitness: {best_individual.fitness}")
+        best_individual = max(self.population, key=lambda individual: self.fitness(individual))
+        return best_individual, self.fitness(best_individual)
 
-#
-# #Test
-# striker = aircraft(573,702)
-# radar1 = sensor_iads(600, 300)
-# radar2 = sensor_iads(700, 400)
-# radar3 = sensor_iads(650, 550)
-# radar4 = sensor_iads(750, 550)
-# radar5 = sensor_iads(550, 650)
-#
-# ga = GeneticAlgorithm(4, striker, 2, 100, 0.1, 65, 20)
-# genome = ga.create_random_genome()
-# ga.fitness(genome)
-# print(len(Jammer.list))
 
 

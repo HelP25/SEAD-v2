@@ -41,21 +41,22 @@ def corridor_width(aircraft_secured, security_width):
         # Determine if there is a potential safe corridor
         if basic_widths[-cpt-1][1] - security_width <= 0:# The highest one is where the corridor will be in first,
             # if there is one
-            return 0 # If the highest basic width is not positive, then there is no corridor
+            return basic_widths[-cpt-1][1] - security_width # If the highest basic width is not positive, then there is no corridor
+            # so the fitness must be penalised by having a negative value
 
         # Check if other widths obstruct the potential corridor
         problematic_widths = []
         for key, value in widths.items():
             if key[0] <= basic_widths[-cpt-1][0][0] and key[1] >= basic_widths[-cpt-1][0][1]:# If the basic width is positive,
                 # then the other widths which could obstruct the probable safe corridor must be positive too
+                problematic_widths += [value] # If they are positive, then they must be taken into account to determine the width of the safe corridor
                 if value - security_width <= 0:
                     Test = False # If there are some other detection range that overlap around the basic width, then there
                     # is no longer corridor possible for this basic width and the next highest one needs to be checked
-                else:
-                    problematic_widths += [value]# If they are positive, then they must be taken into account to determine the width of the safe corridor
         cpt += 1
     if Test is False:
-        return 0
+        problematic_widths.remove(basic_widths[-cpt-2][1])
+        return min(problematic_widths)# returns the negative width which is the more problematic to penalise the fitness
     # Determine the final width of the safe corridor
     final_width = min(problematic_widths)# The width is equal to the smallest interesting widths
     return final_width
