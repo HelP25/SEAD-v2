@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from SEAD_v2.Assets import *
 
 
 def from_dB(G):  # Definition of a function to convert from dB to whatever unit
@@ -16,6 +17,8 @@ class sensor_iads:
     l = -8 #wavelength
     Br = 1.37e6 #bandwidth
     list = []
+    k = 0.06
+    beam_width = np.deg2rad(4)
     def __init__(self, X, Y):
         self.X = X
         self.Y = Y
@@ -77,3 +80,12 @@ class sensor_iads:
             power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
                       /((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj))
         return power
+
+    def G_theta(self, jammer):
+        theta = np.arctan2(self.Y - jammer.Y, self.X - jammer.X)
+        if abs(theta) <= self.beam_width/2:
+            return 1
+        elif abs(theta) > self.beam_width/2 and abs(theta) <= np.pi/2:
+            return self.k * (self.beam_width/theta)**2
+        else:
+            return self.k * (2*self.beam_width/np.pi)**2

@@ -74,7 +74,8 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 
-ga = GeneticAlgorithm(4, striker, 2, 20, 0.2)
+ga = GeneticAlgorithm(2, striker, 2, 100, 0.1, 0.2)
+
 solution, fitness = ga.run(30)
 plt.close("all")
 
@@ -82,17 +83,17 @@ plt.close("all")
 for i, jammer in enumerate(Jammer.list):
     jammer.update(solution[i][0], solution[i][1])
     jammer.targets(solution[i][2])
-    plt.plot(jammer.X, jammer.Y, 'r4', markersize=10, label=jammer.name)
+    plt.plot(jammer.X, jammer.Y, 'r4', markersize=10)
+    plt.text(jammer.X, jammer.Y, jammer.name)
     print(f'{jammer.name} targets {jammer.target.name}')
 for radar in sensor_iads.list:
-    plt.plot(radar.X, radar.Y, 'bs', markersize=10, label=radar.name)
+    plt.plot(radar.X, radar.Y, 'bs', markersize=10)
+    plt.text(radar.X, radar.Y, radar.name)
     radar.get_detection_range(striker, radar.jammers_targeting)
     print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
-print(f"La fitness est de: {fitness}")
+print(f"The fitness is equal to : {fitness}")
 
 plt.legend()
-
 plt.show()
-
 
 
