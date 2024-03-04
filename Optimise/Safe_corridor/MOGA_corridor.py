@@ -19,13 +19,17 @@ class MultiObjGeneticAlgorithm:
         self.Y0 = Y0
         self.population = [self.create_random_genome() for _ in range(population_size)]
         for _ in range(self.nb_jammers): # creation of our jammers
-            jammer = Jammer(0,0)
+            jammer = Jammer(self.X0,self.Y0)
 
 
     def create_random_genome(self):
+
+        # Creation of the borders within the individuals are generated
         maxX = max([radar.X for radar in sensor_iads.list])
         maxY = max([radar.Y for radar in sensor_iads.list])
         minY = min([radar.Y for radar in sensor_iads.list])
+
+        # Generation of an individual using the LHS
         sample = LatinHypercube(3)
         genome = sample.random(self.nb_jammers).tolist()
         for i in range(self.nb_jammers):
@@ -128,12 +132,26 @@ class MultiObjGeneticAlgorithm:
 
 
     def crossover(self, P1, P2):
+
+        # The crossover is only be done with a certain probability: chance_to_crossover
         if random.random() < self.chance_to_crossover:
             C1 = [[] for i in range(self.nb_jammers)]
             C2 = [[] for i in range(self.nb_jammers)]
             def distance(i, radar, Cx):
+                '''
+                Provides the distance between a radar and a jammer from an individual Cx
+                Parameters
+                ----------
+                i : index of the jammer
+                radar : object of the class sensor_iads
+                Cx : individual of the population
+                Returns : float
+                -------
+                '''
                 return np.linalg.norm(np.array((radar.X, radar.Y)) -
                                   np.array((Cx[i][0], Cx[i][1])))
+
+            # For each jammer of the individual, its coordinates and radar targeted are modified according to the same method
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
                 C1[i].append(P1[i][0])
@@ -153,12 +171,13 @@ class MultiObjGeneticAlgorithm:
 
     def mutation(self, individual):
         new_vector = [[] for i in range(self.nb_jammers)]
-        maxX = max([radar.X for radar in sensor_iads.list])
+        maxX = max([radar.X for radar in sensor_iads.list])# Boundaries are set because it is the only method
+                                                           # that can give solution outside the workspace
         if random.random() < self.chance_to_mutate:
             for i in range(self.nb_jammers):
                 for j in range(len(individual[i]) - 1):
                     strnb = str(individual[i][j])
-                    strnb = strnb[::-1]
+                    strnb = strnb[::-1]# The method switches the first and the last digits of the coordinates of the jammers
                     if j == 0 and int(strnb) > maxX:# to not go outside the boundaries
                         new_vector[i].append(2*maxX - int(strnb))
                     else:
@@ -169,12 +188,18 @@ class MultiObjGeneticAlgorithm:
         return new_vector
 
     def fitness(self, genome):
+
+        # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
         for i, jammer in enumerate(Jammer.list):
             jammer.update(genome[i][0], genome[i][1])
             jammer.targets(genome[i][2])
+
+        # Calculation of the different objective function
         objective_function_1_value = corridor_width(self.aircraft_secured, self.security_width) - any_detection(40)
         objective_function_2_value = safe_distance()
         objective_function_3_value = time_constraint(self.X0, self.Y0)
+
+        # Resetting the allocations after the calculation of the fitness
         for radar in sensor_iads.list:
             radar.jammers_targeting = []
         return (objective_function_1_value, objective_function_2_value, objective_function_3_value)
