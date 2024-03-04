@@ -6,7 +6,7 @@ import random
 from scipy.stats.qmc import LatinHypercube
 
 
-class GeneticAlgorithm:
+class SingleObjGeneticAlgorithm:
     best_individual = None
     def __init__(self, nb_jammers, aircraft_secured, security_width, population_size, chance_to_mutate, chance_to_crossover):
         self.population_size = population_size
@@ -44,7 +44,7 @@ class GeneticAlgorithm:
         total_fitness = sum(self.fitness(individual) for individual in self.population)
         min_fitness = min(self.fitness(individual) for individual in self.population)
         graded_individuals = random.choices(self.population,
-                                            weights=[(self.fitness(individual) - min_fitness)/ (total_fitness - min_fitness*len(self.population)) for individual in self.population],
+                                            weights=[(self.fitness(individual) - min_fitness + 1)/ (total_fitness - (min_fitness - 1)*len(self.population)) for individual in self.population],
                                             k=self.population_size) # can draw many times the same individual
 
         return graded_individuals
@@ -53,17 +53,21 @@ class GeneticAlgorithm:
         if random.random() < self.chance_to_crossover:
             C1 = [[] for i in range(self.nb_jammers)]
             C2 = [[] for i in range(self.nb_jammers)]
+            def distance(i, radar, Cx):
+                return np.linalg.norm(np.array((radar.X, radar.Y)) -
+                                  np.array((Cx[i][0], Cx[i][1])))
             for i in range(self.nb_jammers):
+                radars = sensor_iads.list.copy()
                 C1[i].append(P1[i][0])
                 C1[i].append(P2[i][1])
-                radars = sensor_iads.list.copy()
-                radars.remove(P1[i][-1])
-                C1[i].append(random.choice(radars))
+                closest_radar = min(radars, key=lambda radar: distance(i, radar, C1))
+                C1[i].append(closest_radar)
+                radars.remove(closest_radar)
                 C2[i].append(P2[i][0])
                 C2[i].append(P1[i][1])
-                radars = sensor_iads.list.copy()
-                radars.remove(P2[i][-1])
-                C2[i].append(random.choice(radars))
+                closest_radar = min(radars, key=lambda radar: distance(i, radar, C2))
+                C2[i].append(closest_radar)
+                radars.remove(closest_radar)
         else:
             C1 = P1.copy()
             C2 = P2.copy()
@@ -90,7 +94,7 @@ class GeneticAlgorithm:
         for i, jammer in enumerate(Jammer.list):
             jammer.update(genome[i][0], genome[i][1])
             jammer.targets(genome[i][2])
-        fitness = corridor_width(self.aircraft_secured, self.security_width) - any_detection(30)
+        fitness = corridor_width(self.aircraft_secured, self.security_width) - any_detection(40)
         for radar in sensor_iads.list:
             radar.jammers_targeting = []
         return fitness
@@ -113,13 +117,17 @@ class GeneticAlgorithm:
 
     def run(self, generations_count):
         i = 0
-        while i < generations_count:
+        j = 0
+        while i < generations_count and j < 7:
             i += 1
             self.next_generation()
             best_individual_fitness = self.fitness(self.best_individual)
             if best_individual_fitness <= 0 and i >= 10:# In the case the initial population wasn't good enough and it doesn't converge
                 self.population = [self.create_random_genome() for _ in range(self.population_size)]
                 i = 0
+                j += 1
+        if j == 7:
+            print("The algorithm has been ended prematurely because it wasn't able to find a corridor")
         # Find the best individual in the final population
         return self.best_individual, best_individual_fitness
 
