@@ -56,12 +56,13 @@ class MultiObjGeneticAlgorithm:
             # If the length of the selected population reaches the length of the population, then the selection must stop
             if len(selected_individuals) >= self.population_size:
                 ind = True
-            else:
-                front = fronts[i]
-                front = sorted(front, key=lambda x: crowding_distances[x], reverse=True)
-                selected_individuals.extend(definition_pop[individual] for individual in front[:self.population_size-len(selected_individuals)])
-            i+=1
-
+            i += 1
+        # If the size of the selected population does not reach the size of the previous population, the individuals of
+        # the next front must be selected according to their crowding distance
+        if len(selected_individuals) < self.population_size:
+            front = fronts[i]
+            front = sorted(front, key=lambda x: crowding_distances[x], reverse=True)
+            selected_individuals.extend(definition_pop[individual] for individual in front[:self.population_size-len(selected_individuals)])
         return selected_individuals
 
 
@@ -91,7 +92,7 @@ class MultiObjGeneticAlgorithm:
                     distances_i = [0.0] * front_size
                     distances_i[0] = np.inf
                     distances_i[-1] = np.inf
-                    for j in range(1, front_size - 1):
+                    for j in range(1, front_size - 1):# distance related to the neighbours
                         distances_i[j] = (sorted_front[i][j + 1][i] - sorted_front[i][j - 1][i]) / (sorted_front[i][-1][i] - sorted_front[i][0][i])
                     # Add the crowding distances to every individual
                     for j in range(front_size):
@@ -102,29 +103,32 @@ class MultiObjGeneticAlgorithm:
         return distances
 
     def fast_non_dominated_sorting(self, population):
+        # Initialisation
         fronts=[[]]
         S = [[] for _ in range(self.population_size)]
         domination_count = [0 for _ in range(self.population_size)]
         definition_pop = {individual[1]: individual[0] for individual in population}
         pop_fitness = definition_pop.keys()
 
+        # Determination of dominance relations
         for i, p in enumerate(pop_fitness):
             for j, q in enumerate(pop_fitness):
                 if (all(q[k] <= p[k] for k in range(3)) and any(q[k] < p[k] for k in range(3))):
-                    S[i].append((j, q))
+                    S[i].append((j, q))# If p dominates q, add q to the set of solutions dominated by p
                 elif (all(p[k] <= q[k] for k in range(3)) and any(p[k] < q[k] for k in range(3))):
-                    domination_count[i] += 1
+                    domination_count[i] += 1# Increment the domination counter of p
             if domination_count[i] == 0:
-                fronts[0].append((i, p))
+                fronts[0].append((i, p))# Then p belongs to the first front
 
-        k = 0
+        # Creation of the fronts
+        k = 0# Initialize the front counter
         while fronts[k]:
-            Q = []
+            Q = []# Used to store the members of the next front
             for l, (i, p) in enumerate(fronts[k]):
                 for j, q in S[i]:
-                    domination_count[j] -= 1
-                    if domination_count[j] == 0:
-                        Q.append((j, q))
+                    domination_count[j] -= 1# If the relation of dominance from the individuals of the previous front is withdrawn
+                    if domination_count[j] == 0:# If q does not have any dominating individual anymore
+                        Q.append((j, q))# Then q belongs to the next front
                 fronts[k][l] = p
             k += 1
             fronts.append(Q)
