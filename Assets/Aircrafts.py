@@ -46,13 +46,13 @@ class Jammer(aircraft):
     Lj = 3
     Pj = 1
     Bj = 30e6
-    gamma = np.deg2rad(20)# polarization of the antenna
     list = []
     def __init__(self,X,Y):
         self.color = 'Jammer'
         super().__init__(X, Y, self.color)
         Jammer.list += [self]
         self.name = f'jammer{len(Jammer.list)}'
+        plt.text(self.X, self.Y, self.name)
 
 
 

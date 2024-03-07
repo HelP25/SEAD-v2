@@ -42,6 +42,22 @@ class MultiObjGeneticAlgorithm:
         # Perform non-dominated sorting
         fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
 
+        # Adding a hierarchy to the objective functions
+        def hierarchy(fronts, power):
+            for i in range(power):
+                for ind in fronts[i]:
+                    if ind[0] > 0:
+                        fronts[0].append(ind)
+                        fronts[i].remove(ind)
+            for i in range(power, len(fronts)):
+                for ind in fronts[i]:
+                    if ind[0] > 0:
+                        fronts[i-power].append(ind)
+                        fronts[i].remove(ind)
+            return fronts
+
+        fronts = hierarchy(fronts, 3)
+
         # Calculates the crowding distances
         crowding_distances = self.crowding_distance(fronts)
 
@@ -49,18 +65,20 @@ class MultiObjGeneticAlgorithm:
         selected_individuals = []
         i = 0
         ind = False
+        # The selected individuals is first filled up with as many whole fronts as possible
         while i < len(fronts) and ind == False:
-            # Add all the individuals from the front i in the selected population
-            selected_individuals.extend([definition_pop[individual] for individual in fronts[i]])
-
-            # If the length of the selected population reaches the length of the population, then the selection must stop
-            if len(selected_individuals) >= self.population_size:
+            # If, by adding the next front, the size of the selected individuals get bigger than the size of the
+            # population, the process must be stopped
+            if len(selected_individuals) + len(fronts[i]) > self.population_size:
                 ind = True
+            else:
+            # Add all the individuals from the front i in the selected population
+                selected_individuals.extend([definition_pop[individual] for individual in fronts[i]])
             i += 1
         # If the size of the selected population does not reach the size of the previous population, the individuals of
         # the next front must be selected according to their crowding distance
         if len(selected_individuals) < self.population_size:
-            front = fronts[i]
+            front = fronts[i-1]
             front = sorted(front, key=lambda x: crowding_distances[x], reverse=True)
             selected_individuals.extend(definition_pop[individual] for individual in front[:self.population_size-len(selected_individuals)])
         return selected_individuals
@@ -129,7 +147,7 @@ class MultiObjGeneticAlgorithm:
                     domination_count[j] -= 1# If the relation of dominance from the individuals of the previous front is withdrawn
                     if domination_count[j] == 0:# If q does not have any dominating individual anymore
                         Q.append((j, q))# Then q belongs to the next front
-                fronts[k][l] = p
+                fronts[k][l] = p# To get rid of the tuple (i, p)
             k += 1
             fronts.append(Q)
         return fronts, definition_pop
@@ -235,6 +253,6 @@ class MultiObjGeneticAlgorithm:
         # if j == 7:
         #     print("The algorithm has been ended prematurely because it wasn't able to find a corridor")
         fronts, def_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
-        first_front = [def_pop[individual] for individual in fronts[0]]
+        first_front = [def_pop[individual] for individual in fronts[0] if individual[0]>0]
         #Find the best individual in the final population
         return first_front

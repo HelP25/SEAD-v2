@@ -11,7 +11,7 @@ def any_detection(weight):
     total = 1
     for radar in sensor_iads.list:
         for aerial_vehical in aircraft.list:
-            if radar.detection(aerial_vehical, radar.jammers_targeting):
+            if radar.detection(aerial_vehical):
                 total += weight
     return total
 

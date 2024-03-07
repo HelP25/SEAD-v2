@@ -1,34 +1,28 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
 from SEAD_v2.Optimise import *
 from SEAD_v2.Assets import *
 
 plt.close('all')
 
-'''
-#Test
-radar1 = sensor_iads(400, 300)
-EA18G = Jammer(210, 300)
-print("EA18G is detected before jamming: ")
-print(radar1.detection(EA18G))
-plt.pause(2)
-F16 = aircraft(362,342)
-print("EA18G is detected while jamming: ")
-print(radar1.detection(EA18G, [EA18G]))
-print("F16 is detected while EA18G is jamming: ")
-print(radar1.detection(F16,[EA18G]))
-plt.pause(4)
-EA18G.update(310)
-print('F16 is detected while EA18G is jamming: ')
-print(radar1.detection(F16,[EA18G]))
-plt.pause(3)
-EA6B = Jammer(330, 280)
-print('F16 is detected while EA18G is jamming: ')
-print(radar1.detection(F16,[EA18G, EA6B]))
-'''
+# Test
 
-#Scénario
+
+radar1 = sensor_iads(400, 400)
+radar2 = sensor_iads(400, 600)
+radar3 = sensor_iads(400, 900)
+jammer1 = Jammer(330, 510)
+jammer2 = Jammer(295, 530)
+jammer3 = Jammer(250,450)
+radar1.targeted_by([jammer2, jammer1])
+radar2.targeted_by([ jammer3])
+for radar in sensor_iads.list:
+    radar.outline_detection(jammer1)
+print(f"The width is equal to: {find_corridor(jammer1, 2)}")
+
+plt.show()
+
+#  Scénario
 """
 radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
@@ -66,15 +60,45 @@ print(corridor_width(striker, 2))
 
 """
 
-#Test
+#  Test Single objective
+"""
 striker = aircraft(200, 302)
 radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 
+ga = SingleObjGeneticAlgorithm(6, striker, 2, 500, 0.1, 0.2)
 
-ga = MultiObjGeneticAlgorithm(0, 300, 2,striker, 2, 100, 0.1, 0.2)
+solution, fitness = ga.run(100)
+plt.close("all")
+
+for i, jammer in enumerate(Jammer.list):
+    jammer.update(solution[i][0], solution[i][1])
+    jammer.targets(solution[i][2])
+    plt.plot(jammer.X, jammer.Y, 'r4', markersize=10)
+    plt.text(jammer.X, jammer.Y, jammer.name)
+    print(f'{jammer.name} targets {jammer.target.name}')
+for radar in sensor_iads.list:
+    plt.plot(radar.X, radar.Y, 'bs', markersize=10)
+    plt.text(radar.X, radar.Y, radar.name)
+    radar.outline_detection(striker)
+    print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
+print(f"The fitness is equal to : {fitness}")
+
+plt.legend()
+plt.show()
+"""
+
+#  Test Multi objective
+"""
+striker = aircraft(200, 302)
+radar1 = sensor_iads(600, 300)
+radar2 = sensor_iads(700, 400)
+radar3 = sensor_iads(650, 550)
+radar4 = sensor_iads(550, 650)
+
+ga = MultiObjGeneticAlgorithm(0, 300, 2, striker, 2, 300, 0.1, 0.2)
 
 first_front = ga.run(50)
 plt.close("all")
@@ -89,12 +113,11 @@ for k in range(len(first_front)):
     for radar in sensor_iads.list:
         plt.plot(radar.X, radar.Y, 'bs', markersize=10)
         plt.text(radar.X, radar.Y, radar.name)
-        radar.get_detection_range(striker, radar.jammers_targeting)
+        radar.outline_detection(striker)
         print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
     fitness = ga.fitness(first_front[k])
     print(f"The fitness is equal to : {fitness}")
 
     plt.legend()
     plt.show()
-
-
+"""

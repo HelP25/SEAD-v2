@@ -22,8 +22,8 @@ def corridor_width(aircraft_secured, security_width):
     sorted_ranges = sorted(ranges_with_indices.items(), key=lambda x: x[1])
 
     # Calculate widths between two circles of detection range
-    widths = {key: (value - sensor_iads.list[key[0]-1].get_detection_range(aircraft_secured, sensor_iads.list[key[0]-1].jammers_targeting)
-                    -sensor_iads.list[key[1]-1].get_detection_range(aircraft_secured, sensor_iads.list[key[1]-1].jammers_targeting))
+    widths = {key: (value - sensor_iads.list[key[0]-1].get_detection_range(aircraft_secured)
+                    -sensor_iads.list[key[1]-1].get_detection_range(aircraft_secured))
               for key, value in sorted_ranges}
 
     # Create the basic widths list
