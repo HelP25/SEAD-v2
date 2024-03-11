@@ -217,7 +217,7 @@ class MultiObjGeneticAlgorithm:
             jammer.targets(genome[i][2])
 
         # Calculation of the different objective function
-        objective_function_1_value = corridor_width(self.aircraft_secured, self.security_width) - any_detection(40)
+        objective_function_1_value = find_corridor(self.aircraft_secured, self.security_width) - any_detection(40)
         objective_function_2_value = safe_distance()
         objective_function_3_value = time_constraint(self.X0, self.Y0)
 

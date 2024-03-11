@@ -85,11 +85,11 @@ class sensor_iads:
         power = 0
         for jammer in jammers:
             # Basic model
-            power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
-                      / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj))
-            # More realistic model
             # power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
-            #           / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj / self.G_theta(aircraft, jammer, alpha)))
+            #           / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj))
+            # More realistic model
+            power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
+                      / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj / self.G_theta(aircraft, jammer, alpha)))
         return power
 
     def G_theta(self, aircraft, jammer, alpha):

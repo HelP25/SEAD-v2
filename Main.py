@@ -7,21 +7,22 @@ plt.close('all')
 
 # Test
 
-
+"""
 radar1 = sensor_iads(400, 400)
 radar2 = sensor_iads(400, 600)
-radar3 = sensor_iads(400, 900)
+radar3 = sensor_iads(400, 700)
 jammer1 = Jammer(330, 510)
 jammer2 = Jammer(295, 530)
-jammer3 = Jammer(250,450)
-radar1.targeted_by([jammer2, jammer1])
-radar2.targeted_by([ jammer3])
+jammer3 = Jammer(150,330)
+radar1.targeted_by([])
+radar2.targeted_by([jammer2])
+radar3.targeted_by([jammer3])
 for radar in sensor_iads.list:
-    radar.outline_detection(jammer1)
+    radar.outline_detection(jammer2)
 print(f"The width is equal to: {find_corridor(jammer1, 2)}")
 
 plt.show()
-
+"""
 #  Scénario
 """
 radar1 = sensor_iads(600, 300)
@@ -68,9 +69,9 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 
-ga = SingleObjGeneticAlgorithm(6, striker, 2, 500, 0.1, 0.2)
+ga = SingleObjGeneticAlgorithm(2, striker, 2, 100, 0.1, 0.2)
 
-solution, fitness = ga.run(100)
+solution, fitness = ga.run(50)
 plt.close("all")
 
 for i, jammer in enumerate(Jammer.list):
@@ -88,17 +89,17 @@ print(f"The fitness is equal to : {fitness}")
 
 plt.legend()
 plt.show()
-"""
 
-#  Test Multi objective
 """
+#  Test Multi objective
+
 striker = aircraft(200, 302)
 radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 
-ga = MultiObjGeneticAlgorithm(0, 300, 2, striker, 2, 300, 0.1, 0.2)
+ga = MultiObjGeneticAlgorithm(0, 300, 10, striker, 2, 200, 0.1, 0.2)
 
 first_front = ga.run(50)
 plt.close("all")
@@ -120,4 +121,3 @@ for k in range(len(first_front)):
 
     plt.legend()
     plt.show()
-"""
