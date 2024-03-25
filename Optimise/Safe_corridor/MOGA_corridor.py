@@ -7,8 +7,8 @@ from scipy.stats.qmc import LatinHypercube
 
 
 class MultiObjGeneticAlgorithm:
-    best_individual = None
     def __init__(self, X0, Y0, nb_jammers, aircraft_secured, security_width, population_size, chance_to_mutate, chance_to_crossover):
+        self.best_individuals = None
         self.population_size = population_size
         self.chance_to_mutate = chance_to_mutate
         self.chance_to_crossover = chance_to_crossover
@@ -38,6 +38,33 @@ class MultiObjGeneticAlgorithm:
             genome[i][2] = random.choice(sensor_iads.list)
         return genome
 
+    def first_generation(self):# not finished
+        for individual in self.population:
+            if random.random() < 0.2:
+                delta = 50
+                genome = individual.copy()
+                Test = False
+                while not Test:
+                    i = 0
+                    while i < len(genome):
+                        jammer0 = genome[i][0]
+                        closest_radar = max(sensor_iads.list, key=lambda radar: self.distance(radar, genome[i]))
+                        genome[i][0] = closest_radar.X - delta
+                        genome[i][1] = abs(int((closest_radar.Y - genome[i][1])/(closest_radar.X - jammer0 + 0.1)
+                                               * (genome[i][0] - closest_radar.X) + closest_radar.Y))
+                        Jammer.list[i].update(genome[i][0], genome[i][1])
+                        Jammer.list[i].targets(closest_radar)
+                        genome[i][2] = closest_radar
+                        if any_detection(40) == 0:
+                            genome.pop(i)
+                            Test = True and Test
+                        else:
+                            Test = False
+                        i += 1
+                    delta += 50
+                for radar in sensor_iads.list:
+                    radar.jammers_targeting = []
+                return genome
     def select_individuals(self):
         # Perform non-dominated sorting
         fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
@@ -57,6 +84,8 @@ class MultiObjGeneticAlgorithm:
             return fronts
 
         fronts = hierarchy(fronts, 3)
+
+        self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
 
         # Calculates the crowding distances
         crowding_distances = self.crowding_distance(fronts)
@@ -152,38 +181,37 @@ class MultiObjGeneticAlgorithm:
             fronts.append(Q)
         return fronts, definition_pop
 
-
+    def distance(self, radar, jammer):
+        '''
+        Provides the distance between a radar and a jammer from an individual Cx
+        Parameters
+        ----------
+        i : index of the jammer
+        radar : object of the class sensor_iads
+        Cx : individual of the population
+        Returns : float
+        -------
+        '''
+        return np.linalg.norm(np.array((radar.X, radar.Y)) -
+                              np.array((jammer[0], jammer[1])))
     def crossover(self, P1, P2):
 
         # The crossover is only be done with a certain probability: chance_to_crossover
         if random.random() < self.chance_to_crossover:
             C1 = [[] for i in range(self.nb_jammers)]
             C2 = [[] for i in range(self.nb_jammers)]
-            def distance(i, radar, Cx):
-                '''
-                Provides the distance between a radar and a jammer from an individual Cx
-                Parameters
-                ----------
-                i : index of the jammer
-                radar : object of the class sensor_iads
-                Cx : individual of the population
-                Returns : float
-                -------
-                '''
-                return np.linalg.norm(np.array((radar.X, radar.Y)) -
-                                  np.array((Cx[i][0], Cx[i][1])))
 
             # For each jammer of the individual, its coordinates and radar targeted are modified according to the same method
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
                 C1[i].append(P1[i][0])
                 C1[i].append(P2[i][1])
-                closest_radar = min(radars, key=lambda radar: distance(i, radar, C1))
+                closest_radar = min(radars, key=lambda radar: self.distance(radar, C1[i]))
                 C1[i].append(closest_radar)
                 radars.remove(closest_radar)
                 C2[i].append(P2[i][0])
                 C2[i].append(P1[i][1])
-                closest_radar = min(radars, key=lambda radar: distance(i, radar, C2))
+                closest_radar = min(radars, key=lambda radar: self.distance(radar, C2[i]))
                 C2[i].append(closest_radar)
                 radars.remove(closest_radar)
         else:
@@ -230,21 +258,31 @@ class MultiObjGeneticAlgorithm:
     def next_generation(self):
         graded_individuals = self.select_individuals()
         new_population = []
-        while len(new_population) < self.population_size:
+        # if self.best_individuals:
+        #     for ind in self.best_individuals:
+        #         graded_individuals.remove(ind)
+        while len(new_population) < self.population_size - len(self.best_individuals):
             parent1, parent2 = random.sample(graded_individuals, 2)
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
             new_population.append(child1)
             new_population.append(child2)
+        new_population.extend(self.best_individuals)
         self.population = new_population
 
     def run(self, generations_count):
         i = 0
         j = 0
+        first_time = np.inf
         while i < generations_count and j < 7:
             i += 1
             self.next_generation()
+            fronts, def_pop= self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+            for ind in fronts[0]:
+                if ind[0] > 0 and first_time == np.inf:
+                    first_time = i
+                    first_time_good = def_pop[ind]
         #     best_individual_fitness = self.fitness(self.best_individual)
         #     if best_individual_fitness[0] <= 0 and i >= 10:# In the case the initial population wasn't good enough and it doesn't converge
         #         self.population = [self.create_random_genome() for _ in range(self.population_size)]
@@ -253,6 +291,7 @@ class MultiObjGeneticAlgorithm:
         # if j == 7:
         #     print("The algorithm has been ended prematurely because it wasn't able to find a corridor")
         fronts, def_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+        length = len(fronts[0])
         first_front = [def_pop[individual] for individual in fronts[0] if individual[0]>0]
         #Find the best individual in the final population
-        return first_front
+        return first_front, length, first_time, first_time_good

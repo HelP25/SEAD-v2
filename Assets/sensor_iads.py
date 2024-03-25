@@ -88,9 +88,12 @@ class sensor_iads:
             # power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
             #           / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj))
             # More realistic model
-            power += ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
-                      / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj / self.G_theta(aircraft, jammer, alpha)))
+            power += self.jamming_power_1jammer(aircraft, jammer, alpha)
         return power
+
+    def jamming_power_1jammer(self, aircraft, jammer, alpha = None):
+        return ((4 * np.pi * from_dB(self.L) * jammer.Pj * from_dB(jammer.Gj) * self.Br)
+                      / ((self.range(jammer) * 1000) ** 2 * from_dB(jammer.Lj) * jammer.Bj / self.G_theta(aircraft, jammer, alpha)))
 
     def G_theta(self, aircraft, jammer, alpha):
         # Provides the effect of the heading of the jamming

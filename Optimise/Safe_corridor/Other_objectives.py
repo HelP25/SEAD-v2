@@ -8,7 +8,7 @@ def any_detection(weight):
     :param weight: how much the value of the function is increased when the assets or not detected
     :return: the value of the objective function
     """
-    total = 1
+    total = 0
     for radar in sensor_iads.list:
         for aerial_vehical in aircraft.list:
             if radar.detection(aerial_vehical):
@@ -19,11 +19,13 @@ def means_cost():
     return len(sensor_iads.list) - len(Jammer.list)
 
 def safe_distance():
-    sum = 0
+    ranges = []
     for radar in sensor_iads.list:
         for jammer in Jammer.list:
-            sum += radar.range(jammer)
-    return sum
+            ranges += [radar.range(jammer)]
+    mean = np.mean(ranges)
+    s = np.std(ranges, ddof=1)
+    return mean/s
 
 def time_constraint(X0, Y0):
     distance = []
