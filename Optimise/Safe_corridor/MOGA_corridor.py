@@ -17,6 +17,7 @@ class MultiObjGeneticAlgorithm:
         self.security_width = security_width
         self.X0 = X0
         self.Y0 = Y0
+        self.opt_line = min([radar.X for radar in sensor_iads.list]) - sensor_iads.list[0].get_detection_range(aircraft_secured)
         self.population = [self.create_random_genome() for _ in range(population_size)]
         for _ in range(self.nb_jammers): # creation of our jammers
             jammer = Jammer(self.X0,self.Y0)
@@ -38,36 +39,10 @@ class MultiObjGeneticAlgorithm:
             genome[i][2] = random.choice(sensor_iads.list)
         return genome
 
-    def first_generation(self):# not finished
-        for individual in self.population:
-            if random.random() < 0.2:
-                delta = 50
-                genome = individual.copy()
-                Test = False
-                while not Test:
-                    i = 0
-                    while i < len(genome):
-                        jammer0 = genome[i][0]
-                        closest_radar = max(sensor_iads.list, key=lambda radar: self.distance(radar, genome[i]))
-                        genome[i][0] = closest_radar.X - delta
-                        genome[i][1] = abs(int((closest_radar.Y - genome[i][1])/(closest_radar.X - jammer0 + 0.1)
-                                               * (genome[i][0] - closest_radar.X) + closest_radar.Y))
-                        Jammer.list[i].update(genome[i][0], genome[i][1])
-                        Jammer.list[i].targets(closest_radar)
-                        genome[i][2] = closest_radar
-                        if any_detection(40) == 0:
-                            genome.pop(i)
-                            Test = True and Test
-                        else:
-                            Test = False
-                        i += 1
-                    delta += 50
-                for radar in sensor_iads.list:
-                    radar.jammers_targeting = []
-                return genome
-    def select_individuals(self):
+
+    def select_individuals(self, population):
         # Perform non-dominated sorting
-        fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+        fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in population])
 
         # Adding a hierarchy to the objective functions
         def hierarchy(fronts, power):
@@ -152,8 +127,8 @@ class MultiObjGeneticAlgorithm:
     def fast_non_dominated_sorting(self, population):
         # Initialisation
         fronts=[[]]
-        S = [[] for _ in range(self.population_size)]
-        domination_count = [0 for _ in range(self.population_size)]
+        S = [[] for _ in range(len(population))]
+        domination_count = [0 for _ in range(len(population))]
         definition_pop = {individual[1]: individual[0] for individual in population}
         pop_fitness = definition_pop.keys()
 
@@ -224,18 +199,29 @@ class MultiObjGeneticAlgorithm:
         maxX = max([radar.X for radar in sensor_iads.list])# Boundaries are set because it is the only method
                                                            # that can give solution outside the workspace
         if random.random() < self.chance_to_mutate:
+            # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
+            for i, jammer in enumerate(Jammer.list):
+                jammer.update(individual[i][0], individual[i][1])
+                jammer.targets(individual[i][2])
+
+            center_corridor = find_corridor(self.aircraft_secured, self.security_width)[1]
+
             for i in range(self.nb_jammers):
-                for j in range(len(individual[i]) - 1):
-                    strnb = str(individual[i][j])
-                    strnb = strnb[::-1]# The method switches the first and the last digits of the coordinates of the jammers
-                    if j == 0 and int(strnb) > maxX:# to not go outside the boundaries
-                        new_vector[i].append(2*maxX - int(strnb))
-                    else:
-                        new_vector[i].append(int(strnb))
-                new_vector[i].append(individual[i][-1])
-        else:
-            new_vector = individual.copy()
-        return new_vector
+                if individual[i][0] < self.opt_line:
+                    heading = (center_corridor[1] - individual[i][1]) / (center_corridor[0] - individual[i][0])
+                    new_abscissa = int(individual[i][0] + (center_corridor[0] - individual[i][0]) * random.gauss(0.5,0.17))
+                    new_ordinate = int(heading * (new_abscissa - center_corridor[0]) + center_corridor[1])
+                    individual[i][0] = new_abscissa
+                    individual[i][1] = new_ordinate
+
+                    closest_radar = max(sensor_iads.list, key=lambda radar: self.distance(radar, individual[i]))
+                    individual[i][2] = closest_radar
+                    
+            # Resetting the allocations after the calculation of the fitness
+            for radar in sensor_iads.list:
+                radar.jammers_targeting = []
+
+        return individual
 
     def fitness(self, genome):
 
@@ -245,8 +231,8 @@ class MultiObjGeneticAlgorithm:
             jammer.targets(genome[i][2])
 
         # Calculation of the different objective function
-        objective_function_1_value = find_corridor(self.aircraft_secured, self.security_width) - any_detection(40)
-        objective_function_2_value = safe_distance()
+        objective_function_1_value = find_corridor(self.aircraft_secured, self.security_width)[0] - any_detection(40)
+        objective_function_2_value = safe_distance(self.opt_line)
         objective_function_3_value = time_constraint(self.X0, self.Y0)
 
         # Resetting the allocations after the calculation of the fitness
@@ -256,25 +242,22 @@ class MultiObjGeneticAlgorithm:
 
 
     def next_generation(self):
-        graded_individuals = self.select_individuals()
         new_population = []
-        # if self.best_individuals:
-        #     for ind in self.best_individuals:
-        #         graded_individuals.remove(ind)
-        while len(new_population) < self.population_size - len(self.best_individuals):
-            parent1, parent2 = random.sample(graded_individuals, 2)
+        while len(new_population) < self.population_size:
+            parent1, parent2 = random.sample(self.population, 2)
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
             new_population.append(child1)
             new_population.append(child2)
-        new_population.extend(self.best_individuals)
-        self.population = new_population
+        new_population.extend(self.population)
+        self.population = self.select_individuals(new_population)
 
     def run(self, generations_count):
         i = 0
         j = 0
         first_time = np.inf
+        first_time_good = None
         while i < generations_count and j < 7:
             i += 1
             self.next_generation()
@@ -294,4 +277,4 @@ class MultiObjGeneticAlgorithm:
         length = len(fronts[0])
         first_front = [def_pop[individual] for individual in fronts[0] if individual[0]>0]
         #Find the best individual in the final population
-        return first_front, length, first_time, first_time_good
+        return first_front, length, first_time

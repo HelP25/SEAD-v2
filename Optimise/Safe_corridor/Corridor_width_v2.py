@@ -30,16 +30,20 @@ def find_corridor(aircraft_secured, security_width):
                 convex_hull = zone1.union(zone2).convex_hull
                 # If among all the other zones, there is not anyone in between zone1 and zone2,
                 # then it means that there is a corridor between those two zones
-                if not any(convex_hull.intersects(zone) for zone in detection_zones if not zone.intersects(zone1) and not zone.intersects(zone2)):
+                if not any(convex_hull.intersects(zone) for zone in detection_zones if not zone.intersects(zone1) and
+                                                                                       not zone.intersects(zone2)):
+                    corridor = convex_hull.difference(zone1).difference(zone2)
+                    corridor_center = corridor.centroid.coords[0]
                     # The width of the corridor must be added to the list of the widths of all the corridors found
-                    width.append(zone1.distance(zone2))
-        max_width = max(width)  # The best corridor is the one with the widest width
+                    width.append([zone1.distance(zone2), corridor_center])
+        max_width = max(width, key=lambda x: x[0])  # The best corridor is the one with the widest width
 
         #   The best width is returned if it is superior to the security width
-        if max_width - security_width >= 0:
+        if max_width[0] - security_width >= 0:
             return max_width
         else:
-            return max_width - security_width
+            max_width[0] -= security_width
+            return max_width
 
     # If there is no corridor, we return the width of the overlap with the minimum width
     else:
@@ -52,7 +56,9 @@ def find_corridor(aircraft_secured, security_width):
                 # it will not create a safe corridor: there is another detection zone overlapping in between
                 if not overlap.is_empty and not any(zone.contains(overlap) for zone in detection_zones
                                                     if not zone1.contains(zone) and not zone2.contains(zone)):
-                    width.append(np.sqrt(overlap.area)) # the width is recovered by doing a dimensional operation which
-                    # is true within one factor but the same is used for every calculation
-        min_width = min(width)
-        return -min_width
+                    center_overlap = overlap.centroid.coords[0]
+                    width.append([np.sqrt(overlap.area), center_overlap]) # the width is recovered by doing a
+                    # dimensional operation which is true within one factor but the same is used for every calculation
+        min_width = min(width, key=lambda x: x[0])
+        min_width[0] = -min_width[0]
+        return min_width

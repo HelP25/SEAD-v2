@@ -101,7 +101,7 @@ radar4 = sensor_iads(550, 650)
 plt.close("all")
 ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 400, 0.1, 0.2)
 
-first_front, length, first_time, first_sol = ga.run(20)
+first_front, length, first_time = ga.run(30)
 plt.close("all")
 print(f"First time that we have a good solution: {first_time}")
 
@@ -118,22 +118,9 @@ for k in range(len(first_front)):
         plt.plot(radar.X, radar.Y, 'bs', markersize=10)
         plt.text(radar.X, radar.Y, radar.name)
         radar.outline_detection(striker)
-        print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
     fitness = ga.fitness(first_front[k])
-    print(f"The fitness is equal to : {fitness}")
+    print(f"The fitness of the {k+1}th solution is : {fitness}")
 print(f'length of the first front: {length}')
 plt.show()
 
 
-for i, jammer in enumerate(Jammer.list):
-    jammer.update(first_sol[i][0], first_sol[i][1])
-    jammer.targets(first_sol[i][2])
-    plt.plot(jammer.X, jammer.Y, 'r4', markersize=10)
-    plt.text(jammer.X, jammer.Y, jammer.name)
-for radar in sensor_iads.list:
-    plt.plot(radar.X, radar.Y, 'bs', markersize=10)
-    plt.text(radar.X, radar.Y, radar.name)
-    radar.outline_detection(striker)
-    print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
-
-plt.show()
