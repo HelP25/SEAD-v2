@@ -49,8 +49,8 @@ class Jammer(aircraft):
     Bj = 30e6   # Bandwidth of the jamming effect
     list = []   # List
     def __init__(self,X,Y):
-        Jammer.list += [self]
-        self.name = f'jammer{len(Jammer.list)}'
+        Jammer.list += [self]   # Adding the jammer to the jammer list
+        self.name = f'jammer{len(Jammer.list)}' # Defining the name of the jammer
         super().__init__(X, Y, self.name)
 
 

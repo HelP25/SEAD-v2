@@ -3,10 +3,9 @@ import numpy as np
 from SEAD_v2.Assets import *
 
 
-# noinspection PyUnreachableCode
 def corridor_width(aircraft_secured, security_width):
     '''
-    Be careful, radars must be in reading order on the map, so that two radars created in succession are two neighboring
+    Warning: radars must be in reading order on the map, so that two radars created in succession are two neighboring
     radars on the map.
     :param aircraft_secured: the aircraft which has to go through the enemy defences
     :param security_width: take into account the minimum width the safe corridor must have
@@ -34,13 +33,14 @@ def corridor_width(aircraft_secured, security_width):
     # Sort the basic widths in ascending order
     basic_widths = sorted(basic_widths, key=lambda x: x[1])
 
+    # The search for the width of the safe corridor if there is one
     cpt = 0
     Test = False
     while cpt < len(basic_widths) and Test is False:# The highest basic width is not always the good one, so we have to check all the positives basic widths
         Test = True
         # Determine if there is a potential safe corridor
         if basic_widths[-cpt-1][1] - security_width <= 0:# The highest one is where the corridor will be in first,
-            # if there is one
+                                                         # if there is one
             return basic_widths[-cpt-1][1] - security_width # If the highest basic width is not positive, then there is no corridor
             # so the fitness must be penalised by having a negative value
 

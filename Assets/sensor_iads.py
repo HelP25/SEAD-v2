@@ -24,27 +24,27 @@ class sensor_iads:
     def __init__(self, X, Y):
         self.X = X  # Coordinates of the radar
         self.Y = Y
-        self.jammers_targeting = []  # List of the jammers that are targeting the radar
+        self.jammers_targeting = [] # List of the jammers that are targeting the radar
         self.coordinates = [X, Y]
         sensor_iads.list += [self]  # List of all the radars
-        self.name = f'radar{len(sensor_iads.list)}'  # Name of the radar to be written on the graph
+        self.name = f'radar{len(sensor_iads.list)}' # Name of the radar to be written on the graph
         self.point, = plt.plot(self.X, self.Y, 'bs', markersize=10, label=self.name)
 
     # Updates the position of the radar on the graph if its coordinates are modified
     def update(self, x=None, y=None):
-        if x is None:  # we can modify only the abscissa
+        if x is None:   # we can modify only the abscissa
             x = self.X
-        if y is None:  # or the ordinate
+        if y is None:   # or the ordinate
             y = self.Y
         self.X = x  # modification of the coordinates
         self.Y = y
-        self.point.set_data([x], [y])  # update on the graph
+        self.point.set_data([x], [y])   # update on the graph
 
     # Allocates a list of jammers to the radar that they target
     def targeted_by(self, jammers):
-        self.jammers_targeting = jammers.copy()  # The jammers targeting the radar are put in the jammers_targeting list
+        self.jammers_targeting = jammers.copy() # The jammers targeting the radar are put in the jammers_targeting list
         for jammer in jammers:
-            jammer.targets(self)  # Also, to every jammer is allocated one radar that it targets
+            jammer.targets(self)    # Also, to every jammer is allocated one radar that it targets
 
 
     # Calculates the distance between an asset and the radar
@@ -59,6 +59,8 @@ class sensor_iads:
             return True
         return False
 
+
+    # Outline the detection range of the radar
     def outline_detection(self, aircraft):
         x = []
         y = []
@@ -87,7 +89,7 @@ class sensor_iads:
     # Calculates the jamming power needed to determine the detection range
     def jamming_power(self, aircraft, alpha):
         jammers = self.jammers_targeting.copy()
-        if jammers == []:  # if there isn't any jammer that is jamming
+        if jammers == []:   # if there isn't any jammer that is jamming
             return 0
         power = 0
         for jammer in jammers:
@@ -108,18 +110,18 @@ class sensor_iads:
     # Calculates the gain that describes the effect of the angle of attack of the jamming compared to where is heading
     # the main beam
     def G_theta(self, aircraft, jammer, alpha):
-        if alpha is None:  # alpha is used to simulate a different heading to the aircraft to draw the detection range
+        if alpha is None:   # alpha is used to simulate a different heading to the aircraft to draw the detection range
             angle_to_aircraft = np.arctan2(aircraft.Y - self.Y, aircraft.X - self.X)
         else:
             angle_to_aircraft = alpha
 
         angle_to_jammer = np.arctan2(self.Y - jammer.Y, self.X - jammer.X)
-        angle_difference = np.abs(np.mod(angle_to_aircraft - angle_to_jammer, 2 * np.pi) - np.pi)  # Angle between the
+        angle_difference = np.abs(np.mod(angle_to_aircraft - angle_to_jammer, 2 * np.pi) - np.pi)   # Angle between the
         # jammer and the aircraft the radar is trying to detect
         # Then, the theoretic equation used to calculate the gain
-        if abs(angle_difference) <= self.beam_width / 2:  # It is where we get back to the basic model
+        if abs(angle_difference) <= self.beam_width / 2:    # It is where we get back to the basic model
             return 1
         elif abs(angle_difference) > self.beam_width / 2 and abs(angle_to_jammer) <= np.pi / 2:
-            return self.k * (self.beam_width / angle_difference) ** 2  # Where it is smoothed to have a continuous function
-        else:  # Where the detection range is almost not modified
+            return self.k * (self.beam_width / angle_difference) ** 2   # Where it is smoothed to have a continuous function
+        else:   # Where the detection range is almost not modified
             return self.k * (2 * self.beam_width / np.pi) ** 2

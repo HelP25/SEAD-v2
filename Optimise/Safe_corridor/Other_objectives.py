@@ -11,12 +11,10 @@ def any_detection(weight):
     total = 0
     for radar in sensor_iads.list:
         for aerial_vehical in aircraft.list:
-            if radar.detection(aerial_vehical):
+            if radar.detection(aerial_vehical): # Check for any aircraft to be detected by any radar
                 total += weight
     return total
 
-def means_cost():
-    return len(sensor_iads.list) - len(Jammer.list)
 
 def safe_distance(x):
     # sum = 0
@@ -24,15 +22,17 @@ def safe_distance(x):
     #     sum += (jammer.X - x)**2 / (jammer.target.jamming_power_1jammer(jammer, jammer) *1e10)
     # return -1 * sum
     ranges = []
+    # Creation of a list with all the ranges between the jammers and the radars
     for radar in sensor_iads.list:
         for jammer in Jammer.list:
             ranges += [radar.range(jammer)]
-    mean = np.mean(ranges)
-    s = np.std(ranges, ddof=1)
+    mean = np.mean(ranges)  # Calculation of the mean
+    s = np.std(ranges, ddof=1)  # Calculation of the standard deviation
     return mean/s
 
 def time_constraint(X0, Y0):
     distance = []
+    # Creation of a list with all the distances between the initial position and the final one of every jammer
     for aerial_vehicule in aircraft.list:
         distance += [np.linalg.norm(np.array([X0, Y0]) - np.array(aerial_vehicule.coordinates))]
     time = - max(distance)

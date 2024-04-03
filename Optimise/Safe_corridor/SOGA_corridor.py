@@ -17,7 +17,7 @@ class SingleObjGeneticAlgorithm:
         self.aircraft_secured = aircraft_secured
         self.security_width = security_width
         self.population = [self.create_random_genome() for _ in range(population_size)]
-        for _ in range(self.nb_jammers): # creation of our jammers
+        for _ in range(self.nb_jammers):    # creation of our jammers
             jammer = Jammer(0,0)
 
 
@@ -32,9 +32,9 @@ class SingleObjGeneticAlgorithm:
         sample = LatinHypercube(3)
         genome = sample.random(self.nb_jammers).tolist()
         for i in range(self.nb_jammers):
-            genome[i][0] = int(genome[i][0] * maxX)
-            genome[i][1] = int(minY + genome[i][1] * (maxY - minY))
-            genome[i][2] = random.choice(sensor_iads.list)
+            genome[i][0] = int(genome[i][0] * maxX) # Abscissa
+            genome[i][1] = int(minY + genome[i][1] * (maxY - minY)) # Ordinate
+            genome[i][2] = random.choice(sensor_iads.list)  # The target
 
         # Generation of an individual simply using random
         # genome = []
@@ -63,7 +63,7 @@ class SingleObjGeneticAlgorithm:
         return graded_individuals
 
     def crossover(self, P1, P2):
-        # The crossover is only be done with a certain probability: chance_to_crossover
+        # The crossover is only done with a certain probability: chance_to_crossover
         if random.random() < self.chance_to_crossover:
 
             # Initialisation of the children
@@ -96,21 +96,21 @@ class SingleObjGeneticAlgorithm:
                 closest_radar = min(radars, key=lambda radar: distance(i, radar, C2))
                 C2[i].append(closest_radar)
                 radars.remove(closest_radar)
-        else:
+        else:   # When the probability is not verified
             C1 = P1.copy()
             C2 = P2.copy()
         return C1,C2
 
     def mutation(self, individual):
         new_vector = [[] for i in range(self.nb_jammers)]
-        maxX = max([radar.X for radar in sensor_iads.list])# Boundaries are set because it is the only method
-                                                           # that can give solution outside the workspace
+        maxX = max([radar.X for radar in sensor_iads.list]) # Boundaries are set because it is the only method
+                                                            # that can give solution outside the workspace
         if random.random() < self.chance_to_mutate:
-            for i in range(self.nb_jammers):
+            for i in range(self.nb_jammers):    # Each jammer's coordinates are modified in the individual
                 for j in range(len(individual[i]) - 1):
                     strnb = str(individual[i][j])
-                    strnb = strnb[::-1]# The method switches the first and the last digits of the coordinates of the jammers
-                    if j == 0 and int(strnb) > maxX:# to not go outside the boundaries
+                    strnb = strnb[::-1] # The method switches the first and the last digits of the coordinates of the jammers
+                    if j == 0 and int(strnb) > maxX:    # to not go outside the boundaries
                         new_vector[i].append(2*maxX - int(strnb))
                     else:
                         new_vector[i].append(int(strnb))
@@ -124,6 +124,7 @@ class SingleObjGeneticAlgorithm:
         for i, jammer in enumerate(Jammer.list):
             jammer.update(genome[i][0], genome[i][1])
             jammer.targets(genome[i][2])
+
         fitness = corridor_width(self.aircraft_secured, self.security_width) - any_detection(40)
 
         # Resetting the allocations after the calculation of the fitness
@@ -140,18 +141,19 @@ class SingleObjGeneticAlgorithm:
         new_population = []
         # Creation of the next population
         while len(new_population) < self.population_size - 1:
-            parent1, parent2 = random.sample(graded_individuals, 2)
-            child1, child2 = self.crossover(parent1, parent2)
-            child1 = self.mutation(child1)
+            parent1, parent2 = random.sample(graded_individuals, 2) # Randomly choose 2 parents within the list of the
+                                                                       # selected individuals
+            child1, child2 = self.crossover(parent1, parent2)   # The children are bred from the parents
+            child1 = self.mutation(child1)  # They can mutate
             child2 = self.mutation(child2)
-            new_population.append(child1)
+            new_population.append(child1)   # They are added to the new population
             new_population.append(child2)
         new_population.append(self.best_individual)# Adding back the best individual
         self.population = new_population
 
     def run(self, generations_count):
         i = 0
-        j = 0
+        j = 0   # Used to avoid non convergence
         while i < generations_count and j < 7:
             i += 1
             self.next_generation()

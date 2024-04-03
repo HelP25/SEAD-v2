@@ -58,7 +58,7 @@ class MultiObjGeneticAlgorithm:
                         fronts[i].remove(ind)
             return fronts
 
-        fronts = hierarchy(fronts, 3)
+        # fronts = hierarchy(fronts, 3)
 
         self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
 
@@ -216,7 +216,7 @@ class MultiObjGeneticAlgorithm:
 
                     closest_radar = max(sensor_iads.list, key=lambda radar: self.distance(radar, individual[i]))
                     individual[i][2] = closest_radar
-                    
+
             # Resetting the allocations after the calculation of the fitness
             for radar in sensor_iads.list:
                 radar.jammers_targeting = []
@@ -242,15 +242,14 @@ class MultiObjGeneticAlgorithm:
 
 
     def next_generation(self):
-        new_population = []
-        while len(new_population) < self.population_size:
+        new_population = self.population.copy()
+        while len(new_population) < self.population_size * 2:
             parent1, parent2 = random.sample(self.population, 2)
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
             new_population.append(child1)
             new_population.append(child2)
-        new_population.extend(self.population)
         self.population = self.select_individuals(new_population)
 
     def run(self, generations_count):
