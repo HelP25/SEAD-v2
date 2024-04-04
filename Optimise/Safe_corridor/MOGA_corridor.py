@@ -8,7 +8,6 @@ from scipy.stats.qmc import LatinHypercube
 
 class MultiObjGeneticAlgorithm:
     def __init__(self, X0, Y0, nb_jammers, aircraft_secured, security_width, population_size, chance_to_mutate, chance_to_crossover):
-        self.best_individuals = None
         self.population_size = population_size
         self.chance_to_mutate = chance_to_mutate
         self.chance_to_crossover = chance_to_crossover
@@ -18,12 +17,18 @@ class MultiObjGeneticAlgorithm:
         self.X0 = X0
         self.Y0 = Y0
         self.opt_line = min([radar.X for radar in sensor_iads.list]) - sensor_iads.list[0].get_detection_range(aircraft_secured)
-        self.population = [self.create_random_genome() for _ in range(population_size)]
+        self.population = [self.create_random_genome() for _ in range(population_size)] # Creation of the initial population
         for _ in range(self.nb_jammers): # creation of our jammers
             jammer = Jammer(self.X0,self.Y0)
 
 
     def create_random_genome(self):
+        '''
+        Function that aims at creating a random individual for the creation of a population
+        Returns: an individual also defined by its genome
+        -------
+
+        '''
 
         # Creation of the borders within the individuals are generated
         maxX = max([radar.X for radar in sensor_iads.list])
@@ -32,25 +37,48 @@ class MultiObjGeneticAlgorithm:
 
         # Generation of an individual using the LHS
         sample = LatinHypercube(3)
-        genome = sample.random(self.nb_jammers).tolist()
+        genome = sample.random(self.nb_jammers).tolist()    # List of tuples of three random numbers between 0 and 1
         for i in range(self.nb_jammers):
-            genome[i][0] = int(genome[i][0] * maxX)
+            genome[i][0] = int(genome[i][0] * maxX) # To have our random numbers between the boundaries
             genome[i][1] = int(minY + genome[i][1] * (maxY - minY))
             genome[i][2] = random.choice(sensor_iads.list)
         return genome
 
 
     def select_individuals(self, population):
+        """
+        Function that selects the individuals from a list to create a population using elitism
+        Parameters
+        ----------
+        population: list of individuals with a greater size than the one of the population we want to create
+
+        Returns: list of the most interesting individuals from the list in parameter of the function
+        -------
+
+        """
         # Perform non-dominated sorting
         fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in population])
 
-        # Adding a hierarchy to the objective functions
         def hierarchy(fronts, power):
+            """
+            This function aims at adding a hierarchy to the objective functions by boosting the individuals with a good
+            first objective function
+            Parameters
+            ----------
+            fronts: list of the individuals sorted by Pareto fronts
+            power: the number of fronts the individual must be moved forward
+
+            Returns: the new sorted individuals list
+            -------
+
+            """
+            # All the interesting individuals of the power-first fronts must be moved to the first front
             for i in range(power):
-                for ind in fronts[i]:
-                    if ind[0] > 0:
-                        fronts[0].append(ind)
-                        fronts[i].remove(ind)
+                for ind in fronts[i]:   # Checking all the individuals of the front
+                    if ind[0] > 0:  # If its first objective function has an interesting value
+                        fronts[0].append(ind)   # Adding the individual to the first front
+                        fronts[i].remove(ind)   # Removing it from its current front
+            # The others must be moved power fronts above
             for i in range(power, len(fronts)):
                 for ind in fronts[i]:
                     if ind[0] > 0:
@@ -58,9 +86,9 @@ class MultiObjGeneticAlgorithm:
                         fronts[i].remove(ind)
             return fronts
 
-        # fronts = hierarchy(fronts, 3)
+        fronts = hierarchy(fronts, 3)   # Applying the hierarchy aspect
 
-        self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
+        # self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
 
         # Calculates the crowding distances
         crowding_distances = self.crowding_distance(fronts)
@@ -82,9 +110,11 @@ class MultiObjGeneticAlgorithm:
         # If the size of the selected population does not reach the size of the previous population, the individuals of
         # the next front must be selected according to their crowding distance
         if len(selected_individuals) < self.population_size:
-            front = fronts[i-1]
-            front = sorted(front, key=lambda x: crowding_distances[x], reverse=True)
-            selected_individuals.extend(definition_pop[individual] for individual in front[:self.population_size-len(selected_individuals)])
+            front = fronts[i-1] # Because at the end of the while loop, i is increased
+            front = sorted(front, key=lambda x: crowding_distances[x], reverse=True)    # Sorting the individuals by
+                                                                                        # their crowding distance
+            selected_individuals.extend(definition_pop[individual]
+                                        for individual in front[:self.population_size-len(selected_individuals)])
         return selected_individuals
 
 
@@ -114,46 +144,57 @@ class MultiObjGeneticAlgorithm:
                     distances_i = [0.0] * front_size
                     distances_i[0] = np.inf
                     distances_i[-1] = np.inf
-                    for j in range(1, front_size - 1):# distance related to the neighbours
+                    for j in range(1, front_size - 1):  # Distance related to the neighbours normalised
                         distances_i[j] = (sorted_front[i][j + 1][i] - sorted_front[i][j - 1][i]) / (sorted_front[i][-1][i] - sorted_front[i][0][i])
                     # Add the crowding distances to every individual
                     for j in range(front_size):
                         if front[j] in distances:
-                            distances[front[j]] += distances_i[j]
+                            distances[front[j]] += distances_i[j]   # Distances can be added as they are normalised
                         else:
-                            distances[front[j]] = distances_i[j]
+                            distances[front[j]] = distances_i[j]    # Creating a new definition in the dictionary
         return distances
 
     def fast_non_dominated_sorting(self, population):
+        """
+        Function that performs a fast non dominated sorting on a list of individuals regarding their fitness
+        Parameters
+        ----------
+        population: list of individuals defined by a list containing their genome and fitness
+
+        Returns: a list of the individuals sorted out in the different fronts
+                 the dictionary that relates the fitness of an individual to its genome
+        -------
+
+        """
         # Initialisation
-        fronts=[[]]
-        S = [[] for _ in range(len(population))]
+        fronts=[[]] # Creation of the fronts list
+        S = [[] for _ in range(len(population))]    # Creation of the list of set of solutions dominated by another one
         domination_count = [0 for _ in range(len(population))]
-        definition_pop = {individual[1]: individual[0] for individual in population}
+        definition_pop = {individual[1]: individual[0] for individual in population}    #
         pop_fitness = definition_pop.keys()
 
         # Determination of dominance relations
         for i, p in enumerate(pop_fitness):
             for j, q in enumerate(pop_fitness):
                 if (all(q[k] <= p[k] for k in range(3)) and any(q[k] < p[k] for k in range(3))):
-                    S[i].append((j, q))# If p dominates q, add q to the set of solutions dominated by p
+                    S[i].append((j, q)) # If p dominates q, add q to the set of solutions dominated by p
                 elif (all(p[k] <= q[k] for k in range(3)) and any(p[k] < q[k] for k in range(3))):
-                    domination_count[i] += 1# Increment the domination counter of p
+                    domination_count[i] += 1    # Increment the domination counter of p
             if domination_count[i] == 0:
-                fronts[0].append((i, p))# Then p belongs to the first front
+                fronts[0].append((i, p))    # Then p belongs to the first front
 
         # Creation of the fronts
-        k = 0# Initialize the front counter
+        k = 0   # Initialize the front counter
         while fronts[k]:
-            Q = []# Used to store the members of the next front
+            Q = []  # Used to store the members of the next front
             for l, (i, p) in enumerate(fronts[k]):
                 for j, q in S[i]:
-                    domination_count[j] -= 1# If the relation of dominance from the individuals of the previous front is withdrawn
-                    if domination_count[j] == 0:# If q does not have any dominating individual anymore
-                        Q.append((j, q))# Then q belongs to the next front
-                fronts[k][l] = p# To get rid of the tuple (i, p)
+                    domination_count[j] -= 1    # If the relation of dominance from the individuals of the previous front is withdrawn
+                    if domination_count[j] == 0:    # If q does not have any dominating individual anymore
+                        Q.append((j, q))    # Then q belongs to the next front
+                fronts[k][l] = p    # To get rid of the tuple (i, p)
             k += 1
-            fronts.append(Q)
+            fronts.append(Q)    # Creation of the next front
         return fronts, definition_pop
 
     def distance(self, radar, jammer):
@@ -170,9 +211,21 @@ class MultiObjGeneticAlgorithm:
         return np.linalg.norm(np.array((radar.X, radar.Y)) -
                               np.array((jammer[0], jammer[1])))
     def crossover(self, P1, P2):
+        """
+        Function that performs the crossover method
+        Parameters
+        ----------
+        P1: an individual defined by its genome and seen as the first parent
+        P2: an individual defined by its genome and seen as the second parent
+
+        Returns: two individuals defined by their genome and seen as the children
+        -------
+
+        """
 
         # The crossover is only be done with a certain probability: chance_to_crossover
         if random.random() < self.chance_to_crossover:
+            # Initialisation
             C1 = [[] for i in range(self.nb_jammers)]
             C2 = [[] for i in range(self.nb_jammers)]
 
@@ -180,21 +233,34 @@ class MultiObjGeneticAlgorithm:
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
                 C1[i].append(P1[i][0])
-                C1[i].append(P2[i][1])
-                closest_radar = min(radars, key=lambda radar: self.distance(radar, C1[i]))
-                C1[i].append(closest_radar)
-                radars.remove(closest_radar)
+                C1[i].append(P2[i][1])  # The ordinates of the jammer i from the two parents are being exchanged
+                closest_radar = min(radars, key=lambda radar: self.distance(radar, C1[i]))  # And the new jammer created
+                C1[i].append(closest_radar)                                                 # now targets the closest radar
+                radars.remove(closest_radar)    # To avoid focusing only one radar
                 C2[i].append(P2[i][0])
                 C2[i].append(P1[i][1])
                 closest_radar = min(radars, key=lambda radar: self.distance(radar, C2[i]))
                 C2[i].append(closest_radar)
                 radars.remove(closest_radar)
+            random.shuffle(C1)  # The jammers are now shuffled into the genome to avoid having a useless crossover
+            random.shuffle(C2)  # by doing it twice on the same two individuals
         else:
             C1 = P1.copy()
             C2 = P2.copy()
         return C1,C2
 
     def mutation(self, individual):
+        """
+        Function that performs the mutation method
+        Parameters
+        ----------
+        individual: an individual defined by his genome
+
+        Returns: an individual mutated
+        -------
+
+        """
+        # Initialisation
         new_vector = [[] for i in range(self.nb_jammers)]
         maxX = max([radar.X for radar in sensor_iads.list])# Boundaries are set because it is the only method
                                                            # that can give solution outside the workspace
@@ -204,16 +270,21 @@ class MultiObjGeneticAlgorithm:
                 jammer.update(individual[i][0], individual[i][1])
                 jammer.targets(individual[i][2])
 
+            # Calculation of the center of the corridor if there is one or at least where there is a sweet spot
             center_corridor = find_corridor(self.aircraft_secured, self.security_width)[1]
 
+            # Calculation if the new position of the jammers
             for i in range(self.nb_jammers):
+                # If the jammers are on the left side of the optimal line
                 if individual[i][0] < self.opt_line:
+                    # The jammers are moved toward the point center_corridor of a random distance according to
+                    # an affine function
                     heading = (center_corridor[1] - individual[i][1]) / (center_corridor[0] - individual[i][0])
                     new_abscissa = int(individual[i][0] + (center_corridor[0] - individual[i][0]) * random.gauss(0.5,0.17))
                     new_ordinate = int(heading * (new_abscissa - center_corridor[0]) + center_corridor[1])
                     individual[i][0] = new_abscissa
                     individual[i][1] = new_ordinate
-
+                    # To keep a bit of diversity the target is chosen as the closest one since the move is random
                     closest_radar = max(sensor_iads.list, key=lambda radar: self.distance(radar, individual[i]))
                     individual[i][2] = closest_radar
 
@@ -224,6 +295,16 @@ class MultiObjGeneticAlgorithm:
         return individual
 
     def fitness(self, genome):
+        """
+        Calculates the value of the objective functions for an individual
+        Parameters
+        ----------
+        genome: genome of an individual
+
+        Returns: a tuple of values of the objective functions
+        -------
+
+        """
 
         # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
         for i, jammer in enumerate(Jammer.list):
@@ -242,6 +323,11 @@ class MultiObjGeneticAlgorithm:
 
 
     def next_generation(self):
+        """
+        Calculates the next generation of the population
+        -------
+
+        """
         new_population = self.population.copy()
         while len(new_population) < self.population_size * 2:
             parent1, parent2 = random.sample(self.population, 2)

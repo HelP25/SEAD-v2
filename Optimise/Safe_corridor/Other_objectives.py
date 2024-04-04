@@ -17,6 +17,14 @@ def any_detection(weight):
 
 
 def safe_distance(x):
+    """
+    Objective function that calculates the inverse of the variation coefficient
+    Parameters
+
+    Returns: the inverse of the variation coefficient
+    -------
+
+    """
     # sum = 0
     # for jammer in Jammer.list:
     #     sum += (jammer.X - x)**2 / (jammer.target.jamming_power_1jammer(jammer, jammer) *1e10)
@@ -31,6 +39,17 @@ def safe_distance(x):
     return mean/s
 
 def time_constraint(X0, Y0):
+    """
+    Calculates the time constraint as a distance
+    Parameters
+    ----------
+    X0: initial abscissa
+    Y0: initial ordinate
+
+    Returns
+    -------
+
+    """
     distance = []
     # Creation of a list with all the distances between the initial position and the final one of every jammer
     for aerial_vehicule in aircraft.list:

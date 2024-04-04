@@ -22,6 +22,12 @@ class SingleObjGeneticAlgorithm:
 
 
     def create_random_genome(self):
+        '''
+        Function that aims at creating a random individual for the creation of a population
+        Returns: an individual also defined by its genome
+        -------
+
+        '''
 
         # Creation of the borders within the individuals are generated
         maxX = max([radar.X for radar in sensor_iads.list])
@@ -30,7 +36,7 @@ class SingleObjGeneticAlgorithm:
 
         # Generation of an individual using the LHS
         sample = LatinHypercube(3)
-        genome = sample.random(self.nb_jammers).tolist()
+        genome = sample.random(self.nb_jammers).tolist()    # List of tuples of three random numbers between 0 and 1
         for i in range(self.nb_jammers):
             genome[i][0] = int(genome[i][0] * maxX) # Abscissa
             genome[i][1] = int(minY + genome[i][1] * (maxY - minY)) # Ordinate
@@ -49,6 +55,14 @@ class SingleObjGeneticAlgorithm:
         return genome
 
     def select_individuals(self):
+        """
+         Function that selects the individuals from a list to create a population using elitism
+         Parameters
+
+         Returns: list of the most interesting individuals from the list in parameter of the function
+         -------
+
+         """
         # Calculation of the sum of all the fitness to be able to calculate a probability for every individual to be selected
         total_fitness = sum(self.fitness(individual) for individual in self.population)
         min_fitness = min(self.fitness(individual) for individual in self.population)
@@ -63,6 +77,17 @@ class SingleObjGeneticAlgorithm:
         return graded_individuals
 
     def crossover(self, P1, P2):
+        """
+         Function that performs the crossover method
+         Parameters
+         ----------
+         P1: an individual defined by its genome and seen as the first parent
+         P2: an individual defined by its genome and seen as the second parent
+
+         Returns: two individuals defined by their genome and seen as the children
+         -------
+
+         """
         # The crossover is only done with a certain probability: chance_to_crossover
         if random.random() < self.chance_to_crossover:
 
@@ -87,21 +112,33 @@ class SingleObjGeneticAlgorithm:
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
                 C1[i].append(P1[i][0])
-                C1[i].append(P2[i][1])
-                closest_radar = min(radars, key=lambda radar: distance(i, radar, C1))
-                C1[i].append(closest_radar)
-                radars.remove(closest_radar)
+                C1[i].append(P2[i][1])  # The ordinates of the jammer i from the two parents are being exchanged
+                closest_radar = min(radars, key=lambda radar: distance(i, radar, C1))  # And the new jammer created
+                C1[i].append(closest_radar)                                            # now targets the closest radar
+                radars.remove(closest_radar)    # To avoid focusing only one radar
                 C2[i].append(P2[i][0])
                 C2[i].append(P1[i][1])
                 closest_radar = min(radars, key=lambda radar: distance(i, radar, C2))
                 C2[i].append(closest_radar)
                 radars.remove(closest_radar)
+            random.shuffle(C1)  # The jammers are now shuffled into the genome to avoid having a useless crossover
+            random.shuffle(C2)  # by doing it twice on the same two individuals
         else:   # When the probability is not verified
             C1 = P1.copy()
             C2 = P2.copy()
         return C1,C2
 
     def mutation(self, individual):
+        """
+        Function that performs the mutation method
+        Parameters
+        ----------
+        individual: an individual defined by his genome
+
+        Returns: an individual mutated
+        -------
+
+        """
         new_vector = [[] for i in range(self.nb_jammers)]
         maxX = max([radar.X for radar in sensor_iads.list]) # Boundaries are set because it is the only method
                                                             # that can give solution outside the workspace
@@ -120,6 +157,16 @@ class SingleObjGeneticAlgorithm:
         return new_vector
 
     def fitness(self, genome):
+        """
+        Calculates the value of the objective function for an individual
+        Parameters
+        ----------
+        genome: genome of an individual
+
+        Returns: the value of the objective function
+        -------
+
+        """
         # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
         for i, jammer in enumerate(Jammer.list):
             jammer.update(genome[i][0], genome[i][1])
@@ -134,6 +181,11 @@ class SingleObjGeneticAlgorithm:
 
 
     def next_generation(self):
+        """
+        Calculates the next generation of the population
+        -------
+
+        """
         graded_individuals = self.select_individuals()
         self.best_individual = max(graded_individuals, key=lambda individual: self.fitness(individual))
         graded_individuals.remove(self.best_individual)# Keeping the best individual aside to avoid loosing it
