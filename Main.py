@@ -99,9 +99,9 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 plt.close("all")
-ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 500, 0.1, 1)
+ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 400, 0.1, 1)
 
-first_front, length, first_time = ga.run(50)
+first_front, length, first_time = ga.run(30)
 plt.close("all")
 print(f"First time that we have a good solution: {first_time}")
 

@@ -57,7 +57,7 @@ class MultiObjGeneticAlgorithm:
 
         """
         # Perform non-dominated sorting
-        fronts, definition_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in population])
+        fronts, definition_pop, front_level= self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in population])
 
         def hierarchy(fronts, power):
             """
@@ -86,7 +86,7 @@ class MultiObjGeneticAlgorithm:
                         fronts[i].remove(ind)
             return fronts
 
-        fronts = hierarchy(fronts, 3)   # Applying the hierarchy aspect
+        #fronts = hierarchy(fronts, 3)   # Applying the hierarchy aspect
 
         # self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
 
@@ -170,9 +170,8 @@ class MultiObjGeneticAlgorithm:
         fronts=[[]] # Creation of the fronts list
         S = [[] for _ in range(len(population))]    # Creation of the list of set of solutions dominated by another one
         domination_count = [0 for _ in range(len(population))]
-        definition_pop = {individual[1]: individual[0] for individual in population}    #
-        pop_fitness = definition_pop.keys()
-
+        definition_pop = {individual[1]: individual[0] for individual in population}
+        pop_fitness = [individual[1] for individual in population]
         # Determination of dominance relations
         for i, p in enumerate(pop_fitness):
             for j, q in enumerate(pop_fitness):
@@ -184,6 +183,7 @@ class MultiObjGeneticAlgorithm:
                 fronts[0].append((i, p))    # Then p belongs to the first front
 
         # Creation of the fronts
+        front_level = {}
         k = 0   # Initialize the front counter
         while fronts[k]:
             Q = []  # Used to store the members of the next front
@@ -193,9 +193,10 @@ class MultiObjGeneticAlgorithm:
                     if domination_count[j] == 0:    # If q does not have any dominating individual anymore
                         Q.append((j, q))    # Then q belongs to the next front
                 fronts[k][l] = p    # To get rid of the tuple (i, p)
+                front_level[p] = k + 1
             k += 1
             fronts.append(Q)    # Creation of the next front
-        return fronts, definition_pop
+        return fronts, definition_pop, front_level
 
     def distance(self, radar, jammer):
         '''
@@ -328,15 +329,35 @@ class MultiObjGeneticAlgorithm:
         -------
 
         """
+        fronts, def_pop, front_level = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+        distances = self.crowding_distance(fronts)
+        mating_pool = [self.binary_tournament_selection(front_level, distances, def_pop) for _ in range(self.population_size)]
         new_population = self.population.copy()
         while len(new_population) < self.population_size * 2:
-            parent1, parent2 = random.sample(self.population, 2)
+            parent1, parent2 = random.sample(mating_pool, 2)
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
+            if child1 == None and child2 == None:
+                child1 = self.mutation(parent1)
+                child2 = self.mutation(parent2)
             new_population.append(child1)
             new_population.append(child2)
         self.population = self.select_individuals(new_population)
+        print(len(self.population))
+
+    def binary_tournament_selection(self, front_level, distances, def_pop):
+        individual1, individual2, individual3, individual4 = random.choices(list(front_level.keys()), k=4)
+
+        if front_level[individual1] > front_level[individual2]:
+            return def_pop[individual1]
+        elif front_level[individual1] == front_level[individual2]:
+            if distances[individual1] >= distances[individual2]:
+                return def_pop[individual1]
+            else:
+                return def_pop[individual2]
+        else:
+            return def_pop[individual2]
 
     def run(self, generations_count):
         i = 0
@@ -345,8 +366,9 @@ class MultiObjGeneticAlgorithm:
         first_time_good = None
         while i < generations_count and j < 7:
             i += 1
+            print(f'{i}/{generations_count}')
             self.next_generation()
-            fronts, def_pop= self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+            fronts, def_pop, front_level= self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
             for ind in fronts[0]:
                 if ind[0] > 0 and first_time == np.inf:
                     first_time = i
@@ -358,7 +380,7 @@ class MultiObjGeneticAlgorithm:
         #         j += 1
         # if j == 7:
         #     print("The algorithm has been ended prematurely because it wasn't able to find a corridor")
-        fronts, def_pop = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
+        fronts, def_pop, front_level = self.fast_non_dominated_sorting([[individual, self.fitness(individual)] for individual in self.population])
         length = len(fronts[0])
         first_front = [def_pop[individual] for individual in fronts[0] if individual[0]>0]
         #Find the best individual in the final population
