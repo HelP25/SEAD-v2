@@ -15,6 +15,12 @@ def any_detection(weight):
                 total += weight
     return total
 
+def safe_distance_v1():
+    sum = 0
+    for jammer in Jammer.list:
+        for radar in sensor_iads.list:
+            sum += radar.range(jammer)
+    return sum
 
 def safe_distance(x):
     """
@@ -27,7 +33,7 @@ def safe_distance(x):
     """
     # sum = 0
     # for jammer in Jammer.list:
-    #     sum += (jammer.X - x)**2 / (jammer.target.jamming_power_1jammer(jammer, jammer) *1e10)
+    #     sum +=
     # return -1 * sum
     ranges = []
     # Creation of a list with all the ranges between the jammers and the radars

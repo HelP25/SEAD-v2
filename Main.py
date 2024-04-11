@@ -99,9 +99,9 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 plt.close("all")
-ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 400, 0.1, 1)
+ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 200, 0.1, 1)
 
-first_front, length, first_time = ga.run(30)
+first_front, length, first_time, first_front_history = ga.run(100)
 plt.close("all")
 print(f"First time that we have a good solution: {first_time}")
 
@@ -123,4 +123,57 @@ for k in range(len(first_front)):
 print(f'length of the first front: {length}')
 plt.show()
 
+def animate(optimizer):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel('Objective 1')
+    ax.set_ylabel('Objective 2')
+    ax.set_zlabel('Objective 3')
 
+    def update(i):
+        x = [ind[0] for ind in optimizer.first_front_history[i]]
+        y = [ind[1] for ind in optimizer.first_front_history[i]]
+        z = [ind[2] for ind in optimizer.first_front_history[i]]
+        ax.clear()
+        ax.scatter(x, y, z)
+        ax.set_xlabel('Objective 1')
+        ax.set_ylabel('Objective 2')
+        ax.set_zlabel('Objective 3')
+        ax.set_title(f'Iteration {i}')
+        ax.set_xlim(-300, 100)
+        ax.set_ylim(-500, 500)
+        ax.set_zlim(-750, -500)
+        return ax
+
+    ani = animation.FuncAnimation(fig, update, frames=len(optimizer.first_front_history), interval=500)
+    plt.show()
+
+animate(ga)
+"""
+striker = aircraft(200, 302)
+radar1 = sensor_iads(600, 300)
+radar2 = sensor_iads(700, 400)
+radar3 = sensor_iads(650, 550)
+radar4 = sensor_iads(550, 650)
+
+jammer1 = Jammer(569, 631)
+jammer2 = Jammer(609, 587)
+jammer3 = Jammer(505, 530)
+jammer4 = Jammer(310, 480)
+jammer5 = Jammer(370, 450)
+jammer1.targets(radar4)
+jammer2.targets(radar3)
+jammer3.targets(radar4)
+jammer4.targets(radar2)
+jammer5.targets(radar2)
+
+for jammer in Jammer.list:
+    plt.plot(jammer.X, jammer.Y, 'r4', markersize=10)
+    plt.text(jammer.X, jammer.Y, jammer.name)
+for radar in sensor_iads.list:
+    plt.plot(radar.X, radar.Y, 'bs', markersize=10)
+    plt.text(radar.X, radar.Y, radar.name)
+    radar.outline_detection(striker)
+print(find_corridor(striker, 2))
+plt.show()
+"""
