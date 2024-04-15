@@ -99,13 +99,26 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 plt.close("all")
-ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 200, 0.1, 1)
+ga = MultiObjGeneticAlgorithm(0, 300, 4, striker, 2, 50, 0.1, 1)
 
-first_front, length, first_time, first_front_history = ga.run(100)
+first_front, length, first_time, first_front_history = ga.run(50)
 plt.close("all")
 print(f"First time that we have a good solution: {first_time}")
-
 print(f'There are {len(first_front)} solutions')
+
+new_first_front = []
+for ind in first_front:
+    for i, jammer in enumerate(Jammer.list):
+        jammer.update(ind[i][0], ind[i][1])
+        jammer.targets(ind[i][2])
+    if any_detection(5) == 1:
+        new_first_front.append(ind)
+    for radar in sensor_iads.list:
+        radar.jammers_targeting = []
+
+first_front = new_first_front.copy()
+
+
 
 for k in range(len(first_front)):
     plt.subplot(len(first_front)//2 +1, 2, k+1 )
@@ -121,6 +134,15 @@ for k in range(len(first_front)):
     fitness = ga.fitness(first_front[k])
     print(f"The fitness of the {k+1}th solution is : {fitness}")
 print(f'length of the first front: {length}')
+plt.show()
+
+pop = ga.population
+xs = np.array([[j[0] for j in idx] for idx in pop]).flatten()
+ys = np.array([[j[1] for j in idx] for idx in pop]).flatten()
+
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.scatter(xs, ys)
 plt.show()
 
 def animate(optimizer):
@@ -141,7 +163,7 @@ def animate(optimizer):
         ax.set_zlabel('Objective 3')
         ax.set_title(f'Iteration {i}')
         ax.set_xlim(-300, 100)
-        ax.set_ylim(-500, 500)
+        ax.set_ylim(-5, 5)
         ax.set_zlim(-750, -500)
         return ax
 

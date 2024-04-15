@@ -8,7 +8,7 @@ def any_detection(weight):
     :param weight: how much the value of the function is increased when the assets or not detected
     :return: the value of the objective function
     """
-    total = 0
+    total = 1
     for radar in sensor_iads.list:
         for aerial_vehical in aircraft.list:
             if radar.detection(aerial_vehical): # Check for any aircraft to be detected by any radar

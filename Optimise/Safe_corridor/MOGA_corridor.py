@@ -43,7 +43,7 @@ class MultiObjGeneticAlgorithm:
         '''
 
         # Creation of the borders within the individuals are generated
-        maxX = max([radar.X for radar in sensor_iads.list])
+        maxX = max([radar.X for radar in sensor_iads.list]) + sensor_iads.list[0].get_detection_range(self.aircraft_secured)
         maxY = max([radar.Y for radar in sensor_iads.list])
         minY = min([radar.Y for radar in sensor_iads.list])
 
@@ -96,11 +96,22 @@ class MultiObjGeneticAlgorithm:
         -------
 
         """
+        # Getting rid of redundancy
+        pop_def = { self.fitness(individual):individual for individual in population}
+        redundant_size = len(population)
+        population = list(pop_def.values())
+        while len(population) < redundant_size:
+            ind1, ind2 = self.crossover(random.choice(population), self.create_random_genome())
+            population.append(ind1)
+            population.append(ind2)
+        population = population[:redundant_size]
+
+
         # Perform non-dominated sorting
         fronts, definition_pop, front_level = self.fast_non_dominated_sorting(
             [[individual, self.fitness(individual)] for individual in population])
 
-        fronts, front_level = self.hierarchy(fronts, front_level, 2)  # Applying the hierarchy aspect
+        fronts, front_level = self.hierarchy(fronts, front_level, 0)  # Applying the hierarchy aspect
 
         self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
 
@@ -191,10 +202,12 @@ class MultiObjGeneticAlgorithm:
         # Determination of dominance relations
         for p in range(len(pop_fitness)):
             for q in range(len(pop_fitness)):
-                if all(pop_fitness[q][k] <= pop_fitness[p][k] for k in range(3)) and any(pop_fitness[q][k] < pop_fitness[p][k] for k in range(3)):
+                if (all(pop_fitness[q][k] <= pop_fitness[p][k] for k in range(3)) and
+                        any(pop_fitness[q][k] < pop_fitness[p][k] for k in range(3))):
                     if q not in S[p]:
                         S[p].append(q)  # If p dominates q, add q to the set of solutions dominated by p
-                elif all(pop_fitness[p][k] <= pop_fitness[q][k] for k in range(3)) and any(pop_fitness[p][k] < pop_fitness[q][k] for k in range(3)):
+                elif (all(pop_fitness[p][k] <= pop_fitness[q][k] for k in range(3)) and
+                      any(pop_fitness[p][k] < pop_fitness[q][k] for k in range(3))):
                     domination_count[p] += 1  # Increment the domination counter of p
             if domination_count[p] == 0:
                 front_level[pop_fitness[p]] = 1
@@ -222,16 +235,14 @@ class MultiObjGeneticAlgorithm:
         return fronts[:-1], definition_pop, front_level
 
     def distance(self, radar, jammer):
-        '''
+        """
         Provides the distance between a radar and a jammer from an individual Cx
         Parameters
         ----------
-        i : index of the jammer
+        jammer
         radar : object of the class sensor_iads
-        Cx : individual of the population
-        Returns : float
         -------
-        '''
+        """
         return np.linalg.norm(np.array((radar.X, radar.Y)) -
                               np.array((jammer[0], jammer[1])))
 
@@ -254,16 +265,17 @@ class MultiObjGeneticAlgorithm:
             C1 = [[] for i in range(self.nb_jammers)]
             C2 = [[] for i in range(self.nb_jammers)]
 
-            # For each jammer of the individual, its coordinates and radar targeted are modified according to the same method
+            # For each jammer of the individual, its coordinates and radar targeted are modified according to the
+            # same method
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
-                C1[i].append(P1[i][0])
-                C1[i].append(P2[i][1])  # The ordinates of the jammer i from the two parents are being exchanged
+                C1[i].append(P1[i][0] + random.randint(-10, 10))
+                C1[i].append(P2[i][1] + random.randint(-10, 10))  # The ordinates of the jammer i from the two parents are being exchanged
                 closest_radar = min(radars, key=lambda radar: self.distance(radar, C1[i]))  # And the new jammer created
                 C1[i].append(closest_radar)  # now targets the closest radar
                 radars.remove(closest_radar)  # To avoid focusing only one radar
-                C2[i].append(P2[i][0])
-                C2[i].append(P1[i][1])
+                C2[i].append(P2[i][0] + random.randint(-10, 10))
+                C2[i].append(P1[i][1] + random.randint(-10, 10))
                 closest_radar = min(radars, key=lambda radar: self.distance(radar, C2[i]))
                 C2[i].append(closest_radar)
                 radars.remove(closest_radar)
@@ -358,8 +370,8 @@ class MultiObjGeneticAlgorithm:
 
         # Calculation of the different objective function
         width = find_corridor(self.aircraft_secured, self.security_width)[0]
-        objective_function_1_value = width - any_detection(40)
-        objective_function_2_value = safe_distance(self.opt_line) * objective_function_1_value
+        objective_function_1_value = width
+        objective_function_2_value = safe_distance(self.opt_line)/any_detection(4)
         objective_function_3_value = time_constraint(self.X0, self.Y0)
 
         # Resetting the allocations after the calculation of the fitness
@@ -375,7 +387,7 @@ class MultiObjGeneticAlgorithm:
         """
         fronts, def_pop, front_level = self.fast_non_dominated_sorting(
             [[individual, self.fitness(individual)] for individual in self.population])
-        fronts, front_level = self.hierarchy(fronts, front_level, 2)
+        fronts, front_level = self.hierarchy(fronts, front_level, 0)
         distances = self.crowding_distance(fronts)
         mating_pool = []
         for _ in range(self.population_size // 2):
@@ -384,11 +396,11 @@ class MultiObjGeneticAlgorithm:
         while len(new_population) < self.population_size * 2:
             parent1, parent2 = mating_pool[random.randint(0, len(mating_pool) - 1)]
             child1, child2 = self.crossover(parent1, parent2)
-            child1 = self.old_mutation(child1)
-            child2 = self.old_mutation(child2)
+            child1 = self.mutation(child1)
+            child2 = self.mutation(child2)
             if child1 == None and child2 == None:
-                child1 = self.old_mutation(parent1)
-                child2 = self.old_mutation(parent2)
+                child1 = self.mutation(parent1)
+                child2 = self.mutation(parent2)
             new_population.append(child1)
             new_population.append(child2)
         self.population = self.select_individuals(new_population)
