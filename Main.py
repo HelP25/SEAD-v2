@@ -99,7 +99,7 @@ radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
 plt.close("all")
-ga = MultiObjGeneticAlgorithm(0, 300, 4, striker, 2, 50, 0.1, 1)
+ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 50, 0.1, 1)
 
 first_front, length, first_time, first_front_history = ga.run(50)
 plt.close("all")

@@ -19,6 +19,8 @@ class MultiObjGeneticAlgorithm:
         self.security_width = security_width
         self.best_individuals = None
         self.first_front = None
+        self.ideal_point = {}
+        self.nadir_point = {}
         self.first_front_history = []
         self.X0 = X0
         self.Y0 = Y0
@@ -103,13 +105,31 @@ class MultiObjGeneticAlgorithm:
         while len(population) < redundant_size:
             ind1, ind2 = self.crossover(random.choice(population), self.create_random_genome())
             population.append(ind1)
+            pop_def[self.fitness(ind1)] = ind1
             population.append(ind2)
+            if len(population) <= redundant_size:
+                pop_def[self.fitness(ind2)] = ind2
         population = population[:redundant_size]
 
+        # Perform the normalisation of the objective functions
+        pop_fitness = [[pop_def[fitness], fitness] for fitness in list(pop_def.keys())]
+        front0 = self.fast_non_dominated_sorting(pop_fitness, front0=True)
+        for i in range(3):
+            if i in self.ideal_point:
+                self.ideal_point[i] = np.maximum(max([ind[1][i] for ind in pop_fitness]),self.ideal_point[i])
+            else:
+                self.ideal_point[i] = max([ind[1][i] for ind in pop_fitness])
+            if i in self.nadir_point:
+                self.nadir_point[i] = np.minimum(min([ind[i] for ind in front0]), self.nadir_point[i])
+            else:
+                self.nadir_point[i] = min([ind[i] for ind in front0])
+            for individual in pop_fitness:
+                individual[1] = list(individual[1])
+                individual[1][i] = (self.ideal_point[i] - individual[1][i]) / (self.ideal_point[i] - self.nadir_point[i])
+                individual[1] = tuple(individual[1])
 
         # Perform non-dominated sorting
-        fronts, definition_pop, front_level = self.fast_non_dominated_sorting(
-            [[individual, self.fitness(individual)] for individual in population])
+        fronts, definition_pop, front_level = self.fast_non_dominated_sorting(pop_fitness)
 
         fronts, front_level = self.hierarchy(fronts, front_level, 0)  # Applying the hierarchy aspect
 
@@ -179,7 +199,7 @@ class MultiObjGeneticAlgorithm:
                             distances[front[j]] = distances_i[j]  # Creating a new definition in the dictionary
         return distances
 
-    def fast_non_dominated_sorting(self, population):
+    def fast_non_dominated_sorting(self, population, front0=False):
         """
         Function that performs a fast non dominated sorting on a list of individuals regarding their fitness
         Parameters
@@ -196,23 +216,28 @@ class MultiObjGeneticAlgorithm:
         S = [[] for _ in range(len(population))]  # Creation of the list of set of solutions dominated by another one
         domination_count = [0 for _ in range(len(population))]
         definition_pop = {individual[1]: individual[0] for individual in population}
-        pop_fitness = [individual[1] for individual in population]
+        fitness = [individual[1] for individual in population]
         front_level = {}
 
         # Determination of dominance relations
-        for p in range(len(pop_fitness)):
-            for q in range(len(pop_fitness)):
-                if (all(pop_fitness[q][k] <= pop_fitness[p][k] for k in range(3)) and
-                        any(pop_fitness[q][k] < pop_fitness[p][k] for k in range(3))):
+        for p in range(len(fitness)):
+            for q in range(len(fitness)):
+                if (all(fitness[q][k] <= fitness[p][k] for k in range(3)) and
+                        any(fitness[q][k] < fitness[p][k] for k in range(3))):
                     if q not in S[p]:
                         S[p].append(q)  # If p dominates q, add q to the set of solutions dominated by p
-                elif (all(pop_fitness[p][k] <= pop_fitness[q][k] for k in range(3)) and
-                      any(pop_fitness[p][k] < pop_fitness[q][k] for k in range(3))):
+                elif (all(fitness[p][k] <= fitness[q][k] for k in range(3)) and
+                      any(fitness[p][k] < fitness[q][k] for k in range(3))):
                     domination_count[p] += 1  # Increment the domination counter of p
             if domination_count[p] == 0:
-                front_level[pop_fitness[p]] = 1
+                front_level[fitness[p]] = 1
                 if p not in fronts[0]:
                     fronts[0].append(p)  # Then p belongs to the first front
+
+        if front0 is True:  # If only the first front is needed (to avoid more useless calculations)
+            for i, ind in enumerate(fronts[0]):
+                fronts[0][i] = fitness[ind]
+            return fronts[0]
 
         # Creation of the fronts
         k = 0  # Initialize the front counter
@@ -223,14 +248,14 @@ class MultiObjGeneticAlgorithm:
                     domination_count[q] -= 1  # If the relation of dominance from the individuals of the previous
                     # front is withdrawn
                     if domination_count[q] == 0:  # If q does not have any dominating individual anymore
-                        front_level[pop_fitness[q]] = k + 2
+                        front_level[fitness[q]] = k + 2
                         if q not in Q:
                             Q.append(q)  # Then q belongs to the next front
             k += 1
             fronts.append(Q)  # Creation of the next front
         for front in fronts:
             for i, ind in enumerate(front):
-                front[i] = pop_fitness[ind]
+                front[i] = fitness[ind]
         self.first_front = fronts[0]
         return fronts[:-1], definition_pop, front_level
 
