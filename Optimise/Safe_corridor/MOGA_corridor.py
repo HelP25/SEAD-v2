@@ -17,23 +17,17 @@ class MultiObjGeneticAlgorithm:
         self.nb_jammers = nb_jammers
         self.aircraft_secured = aircraft_secured
         self.security_width = security_width
-        self.best_individuals = None
-        self.first_front = None
-        self.ideal_point = {}
-        self.nadir_point = {}
-        self.first_front_history = []
-        self.X0 = X0
-        self.Y0 = Y0
+        self.first_front = None # The first front of the current population is saved in here
+        self.ideal_point = {}   # Dictionary saving the ideal point of the optimisation until the current iteration
+        self.nadir_point = {}   # Dictionary saving the nadir point of the optimisation until the current iteration
+        self.first_front_history = []   # Save all the first fronts of the different iterations as a list of list
+        self.X0 = X0    # Initial abscissa of the jammers
+        self.Y0 = Y0    # Initial ordinate of the jammers
         self.opt_line = min([radar.X for radar in sensor_iads.list]) - sensor_iads.list[0].get_detection_range(
-            aircraft_secured)
+            aircraft_secured)   # Calculation of the optimal abscissa line based on the context of the problem
         self.population = [self.create_random_genome() for _ in
                            range(population_size)]  # Creation of the initial population
-        # self.population.append([[569, 631, next(radar for radar in sensor_iads.list if radar.name == 'radar4')],
-        #                         [609, 587, next(radar for radar in sensor_iads.list if radar.name == 'radar3')],
-        #                         [530, 505, next(radar for radar in sensor_iads.list if radar.name == 'radar4')],
-        #                         [310, 480, next(radar for radar in sensor_iads.list if radar.name == 'radar2')],
-        #                         [370, 450, next(radar for radar in sensor_iads.list if radar.name == 'radar2')]])
-        for _ in range(self.nb_jammers):  # creation of our jammers
+        for _ in range(self.nb_jammers):    # Creation of our jammers
             jammer = Jammer(self.X0, self.Y0)
 
     def create_random_genome(self):
@@ -67,7 +61,7 @@ class MultiObjGeneticAlgorithm:
         fronts: list of the individuals sorted by Pareto fronts
         power: the number of fronts the individual must be moved forward
 
-        Returns: the new sorted individuals list
+        Returns: the new sorted individuals list in the front list and in the dictionary
         -------
 
         """
@@ -98,48 +92,53 @@ class MultiObjGeneticAlgorithm:
         -------
 
         """
+
         # Getting rid of redundancy
-        pop_def = { self.fitness(individual):individual for individual in population}
-        redundant_size = len(population)
-        population = list(pop_def.values())
+        pop_def = {self.fitness(individual):individual for individual in population}    # By creating a dictionary out
+        # of the fitness of the individuals, it removes all the individuals with a redundant fitness
+        redundant_size = len(population)    # Size of the population before getting rid of the redundant fitness
+        population = list(pop_def.values()) # New population without the redundant fitness
+        # Completing the new population with brand-new individuals
         while len(population) < redundant_size:
-            ind1, ind2 = self.crossover(random.choice(population), self.create_random_genome())
+            ind1, ind2 = self.crossover(random.choice(population), self.create_random_genome()) # Creating the new
+            # individuals out of the breeding of a random individual of the population with a randomly generated
+            # individual to maintain a bit of diversity
             population.append(ind1)
-            pop_def[self.fitness(ind1)] = ind1
+            pop_def[self.fitness(ind1)] = ind1  # Adding the new individual and its fitness to the dictionary
             population.append(ind2)
-            if len(population) <= redundant_size:
+            if len(population) <= redundant_size:   # To avoid adding to much individuals
                 pop_def[self.fitness(ind2)] = ind2
-        population = population[:redundant_size]
+        population = population[:redundant_size]    # Same
 
         # Perform the normalisation of the objective functions
-        pop_fitness = [[pop_def[fitness], fitness] for fitness in list(pop_def.keys())]
-        front0 = self.fast_non_dominated_sorting(pop_fitness, front0=True)
-        for i in range(3):
-            if i in self.ideal_point:
-                self.ideal_point[i] = np.maximum(max([ind[1][i] for ind in pop_fitness]),self.ideal_point[i])
-            else:
-                self.ideal_point[i] = max([ind[1][i] for ind in pop_fitness])
-            if i in self.nadir_point:
-                self.nadir_point[i] = np.minimum(min([ind[i] for ind in front0]), self.nadir_point[i])
-            else:
-                self.nadir_point[i] = min([ind[i] for ind in front0])
-            for individual in pop_fitness:
-                individual[1] = list(individual[1])
-                individual[1][i] = (self.ideal_point[i] - individual[1][i]) / (self.ideal_point[i] - self.nadir_point[i])
-                individual[1] = tuple(individual[1])
+        pop_fitness = [[pop_def[fitness], fitness] for fitness in list(pop_def.keys())] # List of all the individuals
+        # with their fitness
+
+        # front0, def_pop = self.fast_non_dominated_sorting(pop_fitness, front0=True)
+        # for i in range(3):
+        #     if i in self.ideal_point:
+        #         self.ideal_point[i] = np.maximum(max([ind[1][i] for ind in pop_fitness]),self.ideal_point[i])
+        #     else:
+        #         self.ideal_point[i] = max([ind[1][i] for ind in pop_fitness])
+        #     if i in self.nadir_point:
+        #         self.nadir_point[i] = np.minimum(min([ind[i] for ind in front0]), self.nadir_point[i])
+        #     else:
+        #         self.nadir_point[i] = min([ind[i] for ind in front0])
+        #     for individual in pop_fitness:
+        #         individual[1] = list(individual[1])
+        #         individual[1][i] = (self.ideal_point[i] - individual[1][i]) / (self.ideal_point[i] - self.nadir_point[i])
+        #         individual[1] = tuple(individual[1])
 
         # Perform non-dominated sorting
         fronts, definition_pop, front_level = self.fast_non_dominated_sorting(pop_fitness)
 
-        fronts, front_level = self.hierarchy(fronts, front_level, 0)  # Applying the hierarchy aspect
-
-        self.best_individuals = [definition_pop[ind] for ind in fronts[0] if ind[0] > 0]
+        fronts, front_level = self.hierarchy(fronts, front_level, 1)  # Applying the hierarchy aspect
 
         # Calculates the crowding distances
         crowding_distances = self.crowding_distance(fronts)
 
         # Selection
-        selected_individuals = []
+        selected_individuals = []   # Initialisation
         i = 0
         ind = False
         # The selected individuals is first filled up with as many whole fronts as possible
@@ -160,6 +159,7 @@ class MultiObjGeneticAlgorithm:
             # their crowding distance
             selected_individuals.extend(definition_pop[individual]
                                         for individual in front[:self.population_size - len(selected_individuals)])
+            # Adding those the most important crowding distance to reach the size wanted
         return selected_individuals
 
     def crowding_distance(self, fronts):
@@ -172,7 +172,7 @@ class MultiObjGeneticAlgorithm:
         # Initialize crowding distances
         distances = {}
 
-        for front in fronts:
+        for front in fronts:    # The crowding distances are calculated front by front
             front_size = len(front)
 
             if front_size <= 2:
@@ -184,7 +184,7 @@ class MultiObjGeneticAlgorithm:
                 sorted_front = [sorted(front, key=lambda x: x[i]) for i in range(3)]
 
                 # Calculate the crowding distance for every individual of the front
-                for i in range(3):
+                for i in range(3):  # Calculation of the distances for each sorting according one objective function
                     distances_i = [0.0] * front_size
                     distances_i[0] = np.inf
                     distances_i[-1] = np.inf
@@ -227,9 +227,9 @@ class MultiObjGeneticAlgorithm:
                     if q not in S[p]:
                         S[p].append(q)  # If p dominates q, add q to the set of solutions dominated by p
                 elif (all(fitness[p][k] <= fitness[q][k] for k in range(3)) and
-                      any(fitness[p][k] < fitness[q][k] for k in range(3))):
+                      any(fitness[p][k] < fitness[q][k] for k in range(3))):    # If q dominates p
                     domination_count[p] += 1  # Increment the domination counter of p
-            if domination_count[p] == 0:
+            if domination_count[p] == 0:    # If is not dominated at all
                 front_level[fitness[p]] = 1
                 if p not in fronts[0]:
                     fronts[0].append(p)  # Then p belongs to the first front
@@ -237,7 +237,7 @@ class MultiObjGeneticAlgorithm:
         if front0 is True:  # If only the first front is needed (to avoid more useless calculations)
             for i, ind in enumerate(fronts[0]):
                 fronts[0][i] = fitness[ind]
-            return fronts[0]
+            return fronts[0], definition_pop
 
         # Creation of the fronts
         k = 0  # Initialize the front counter
@@ -253,6 +253,7 @@ class MultiObjGeneticAlgorithm:
                             Q.append(q)  # Then q belongs to the next front
             k += 1
             fronts.append(Q)  # Creation of the next front
+        # Conversion of the index in fronts into the tuple of fitness linked
         for front in fronts:
             for i, ind in enumerate(front):
                 front[i] = fitness[ind]
@@ -294,8 +295,9 @@ class MultiObjGeneticAlgorithm:
             # same method
             for i in range(self.nb_jammers):
                 radars = sensor_iads.list.copy()
-                C1[i].append(P1[i][0] + random.randint(-10, 10))
-                C1[i].append(P2[i][1] + random.randint(-10, 10))  # The ordinates of the jammer i from the two parents are being exchanged
+                C1[i].append(P1[i][0] + random.randint(-10, 10))    # The ordinates of the jammer i from the two
+                # parents are being exchanged
+                C1[i].append(P2[i][1] + random.randint(-10, 10))    # A bit of random is added to maintain diversity
                 closest_radar = min(radars, key=lambda radar: self.distance(radar, C1[i]))  # And the new jammer created
                 C1[i].append(closest_radar)  # now targets the closest radar
                 radars.remove(closest_radar)  # To avoid focusing only one radar
@@ -313,7 +315,9 @@ class MultiObjGeneticAlgorithm:
 
     def mutation(self, individual):
         """
-        Function that performs the mutation method
+        Function that performs the mutation method. Here, the goal of the mutation is no longer to maintain diversity
+        (which is done in other aspects) but to refocus the research area.
+
         Parameters
         ----------
         individual: an individual defined by his genome
@@ -322,12 +326,9 @@ class MultiObjGeneticAlgorithm:
         -------
 
         """
-        # Initialisation
-        new_vector = [[] for i in range(self.nb_jammers)]
-        maxX = max([radar.X for radar in sensor_iads.list])  # Boundaries are set because it is the only method
-        # that can give solution outside the workspace
         if random.random() < self.chance_to_mutate:
-            # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
+            # Updating the battle space context with the DNA of an individual by overwriting the characteristics of
+            # the objects Jammer
             for i, jammer in enumerate(Jammer.list):
                 jammer.update(individual[i][0], individual[i][1])
                 jammer.targets(individual[i][2])
@@ -357,26 +358,7 @@ class MultiObjGeneticAlgorithm:
 
         return individual
 
-    def old_mutation(self, individual):
-        new_vector = [[] for i in range(self.nb_jammers)]
-        maxX = max([radar.X for radar in sensor_iads.list])  # Boundaries are set because it is the only method
-        # that can give solution outside the workspace
-        if random.random() < self.chance_to_mutate:
-            for i in range(self.nb_jammers):
-                for j in range(len(individual[i]) - 1):
-                    strnb = str(individual[i][j])
-                    strnb = strnb[
-                            ::-1]  # The method switches the first and the last digits of the coordinates of the jammers
-                    if j == 0 and int(strnb) > maxX:  # to not go outside the boundaries
-                        new_vector[i].append(2 * maxX - int(strnb))
-                    else:
-                        new_vector[i].append(int(strnb))
-                new_vector[i].append(individual[i][-1])
-        else:
-            new_vector = individual.copy()
-        return new_vector
-
-    def fitness(self, genome):
+    def fitness(self, genome, simplification = False):
         """
         Calculates the value of the objective functions for an individual
         Parameters
@@ -388,20 +370,28 @@ class MultiObjGeneticAlgorithm:
 
         """
 
-        # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the objects Jammer
+        # Updating the battle space context with the DNA of an individual by overwriting the characteristics of the
+        # objects Jammer
         for i, jammer in enumerate(Jammer.list):
             jammer.update(genome[i][0], genome[i][1])
             jammer.targets(genome[i][2])
 
         # Calculation of the different objective function
         width = find_corridor(self.aircraft_secured, self.security_width)[0]
+        detection = any_detection(4)
         objective_function_1_value = width
-        objective_function_2_value = safe_distance(self.opt_line)/any_detection(4)
+        objective_function_2_value = safe_distance(self.opt_line)/detection
         objective_function_3_value = time_constraint(self.X0, self.Y0)
 
         # Resetting the allocations after the calculation of the fitness
         for radar in sensor_iads.list:
             radar.jammers_targeting = []
+
+        # To use at the same time, the corridor width and any_detection function without needing to update the battle
+        # space context out of the function (only used to get rid of the useless jammers at the very end)
+        if simplification is True:
+            return (objective_function_1_value, detection)
+
         return (objective_function_1_value, objective_function_2_value, objective_function_3_value)
 
     def next_generation(self):
@@ -410,107 +400,76 @@ class MultiObjGeneticAlgorithm:
         -------
 
         """
+        # Creation of the mating pool to perform the crossover
         fronts, def_pop, front_level = self.fast_non_dominated_sorting(
             [[individual, self.fitness(individual)] for individual in self.population])
-        fronts, front_level = self.hierarchy(fronts, front_level, 0)
-        distances = self.crowding_distance(fronts)
+        fronts, front_level = self.hierarchy(fronts, front_level, 1)
+        distances = self.crowding_distance(fronts)  # The mating pool is created regarded the fronts and crowding distance
         mating_pool = []
         for _ in range(self.population_size // 2):
-            mating_pool.append(self.binary_tournament_selection(front_level, distances, def_pop))
+            mating_pool.append(self.binary_tournament_selection(front_level, distances, def_pop))   # The couples are
+            # already defined in the mating pool
+
+        # Creation of the new population before the selection
         new_population = self.population.copy()
         while len(new_population) < self.population_size * 2:
-            parent1, parent2 = mating_pool[random.randint(0, len(mating_pool) - 1)]
+            parent1, parent2 = mating_pool[random.randint(0, len(mating_pool) - 1)] # The couple of parents is chosen
+            # randomly within the mating pool
             child1, child2 = self.crossover(parent1, parent2)
             child1 = self.mutation(child1)
             child2 = self.mutation(child2)
-            if child1 == None and child2 == None:
-                child1 = self.mutation(parent1)
-                child2 = self.mutation(parent2)
             new_population.append(child1)
             new_population.append(child2)
-        self.population = self.select_individuals(new_population)
-        # print(len(self.population))
+        self.population = self.select_individuals(new_population)   # Selection of the individual
 
     def binary_tournament_selection(self, front_level, distances, def_pop):
-        ind_in_tournament = random.choices(list(front_level.keys()), k=4)
-        max_level = max(list(front_level.values()))
-        tournament = {}
-        for ind in ind_in_tournament:
-            if distances[ind] == np.inf:
-                distances[ind] = 3
-            tournament[ind] = max_level - front_level[ind] + distances[ind] / 3.01
-        selection = sorted(ind_in_tournament, key=lambda ind: tournament[ind], reverse=True)
-        return [def_pop[ind] for ind in selection[:2]]
-
-    def next_generation_old(self):
         """
-        Calculates the next generation of the population
+        From 4 random individuals, it selects the couple of the two best of them regarding their front and their crowding distance
+        Parameters
+        ----------
+        front_level: dictionary of the fronts for each individual
+        distances: dictionary of the crowding distances for each individual
+        def_pop: dictionary of the individuals and their fitness
+
+        Returns: a couple of individuals
         -------
 
         """
-        fronts, def_pop, front_level = self.fast_non_dominated_sorting(
-            [[individual, self.fitness(individual)] for individual in self.population])
-        fronts, front_level = self.hierarchy(fronts, front_level, 2)
-        distances = self.crowding_distance(fronts)
-        mating_pool = [self.binary_tournament_selection_old(front_level, distances, def_pop) for _ in
-                       range(self.population_size)]
-        new_population = self.population.copy()
-        while len(new_population) < self.population_size * 2:
-            parent1, parent2 = random.sample(mating_pool, 2)
-            child1, child2 = self.crossover(parent1, parent2)
-            child1 = self.old_mutation(child1)
-            child2 = self.old_mutation(child2)
-            if child1 == None and child2 == None:
-                child1 = self.old_mutation(parent1)
-                child2 = self.old_mutation(parent2)
-            new_population.append(child1)
-            new_population.append(child2)
-        self.population = self.select_individuals(new_population)
-        print(len(self.population))
-
-    def binary_tournament_selection_old(self, front_level, distances, def_pop):
-        individual1, individual2 = random.choices(list(front_level.keys()), k=2)
-
-        if front_level[individual1] > front_level[individual2]:
-            return def_pop[individual1]
-        elif front_level[individual1] == front_level[individual2]:
-            if distances[individual1] >= distances[individual2]:
-                return def_pop[individual1]
-            else:
-                return def_pop[individual2]
-        else:
-            return def_pop[individual2]
+        ind_in_tournament = random.choices(list(front_level.keys()), k=4)   # Choose 4 individuals randomly into the population
+        max_level = max(list(front_level.values())) # Find out which is the maximum front level of the population
+        tournament = {} # Definition of a dictionary that will provide to each individual the criteria of selection
+        for ind in ind_in_tournament:
+            if distances[ind] == np.inf:
+                distances[ind] = 3  # Modifying the crowding distances that are infinite because all the others are equal to less than 3
+            tournament[ind] = max_level - front_level[ind] + distances[ind] / 3.01  # Associating to each individual
+            # a value of interest that is equal to the sum of the normalised crowding distance and the maximum front
+            # level minus the front level of the individual
+        selection = sorted(ind_in_tournament, key=lambda ind: tournament[ind], reverse=True)    #sorting the individuals
+        # by this value. The highest value correspond to the individual from the first front with the highest crowding distance
+        return [def_pop[ind] for ind in selection[:2]]
 
 
     def run(self, generations_count):
         i = 0
         j = 0
         first_time = np.inf
-        first_time_good = None
 
+        # Main loop
         while i < generations_count and j < 7:
             i += 1
-            print(f'{i}/{generations_count}')
-            self.next_generation()
-            #self.next_generation_old()
-            fronts, def_pop, front_level = self.fast_non_dominated_sorting(
-                [[individual, self.fitness(individual)] for individual in self.population])
-            print(len(list(def_pop.keys())))
-            self.first_front_history.append(self.first_front)
-            for ind in self.first_front:
+            print(f'{i}/{generations_count}')   # Progression of the algorithm
+            self.next_generation()  # Calculates the next generation of the population
+            front0, def_pop = self.fast_non_dominated_sorting(
+                [[individual, self.fitness(individual)] for individual in self.population], front0=True)    # Get the first front
+            self.first_front_history.append(front0) # Save the first front of this iteration
+            # Check if there is a good solution in the first front of the current iteration
+            for ind in front0:
                 if ind[0] > 0 and first_time == np.inf:
                     first_time = i
-                    first_time_good = def_pop[ind]
-        #     best_individual_fitness = self.fitness(self.best_individual)
-        #     if best_individual_fitness[0] <= 0 and i >= 10:# In the case the initial population wasn't good enough and it doesn't converge
-        #         self.population = [self.create_random_genome() for _ in range(self.population_size)]
-        #         i = 0
-        #         j += 1
-        # if j == 7:
-        #     print("The algorithm has been ended prematurely because it wasn't able to find a corridor")
-        fronts, def_pop, front_level = self.fast_non_dominated_sorting(
-            [[individual, self.fitness(individual)] for individual in self.population])
-        length = len(self.first_front)
-        first_front = [def_pop[individual] for individual in self.first_front if individual[0] > 0]
+
         # Find the best individual in the final population
+        front0, def_pop = self.fast_non_dominated_sorting(
+            [[individual, self.fitness(individual)] for individual in self.population], front0=True)
+        length = len(front0)
+        first_front = [def_pop[individual] for individual in front0 if individual[0] > 0]
         return first_front, length, first_time, self.first_front_history

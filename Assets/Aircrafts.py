@@ -12,6 +12,7 @@ class aircraft:
         self.target = None  # Used for the allocation, every aircraft can get a target allocated
         aircraft.list += [self]  # List of all the aircrafts
         self.name = name  # Name specific to every asset
+        self.fuel_consumption = 10 # dollars/km
         if self.name == 'aircraft':  # To specify the type of aircraft it is to differentiate them on the graph
             point = 'r>'
             self.name += f'{len(aircraft.list)}'
@@ -51,6 +52,7 @@ class Jammer(aircraft):
     def __init__(self,X,Y):
         Jammer.list += [self]   # Adding the jammer to the jammer list
         self.name = f'jammer{len(Jammer.list)}' # Defining the name of the jammer
+        self.use_cost = 12000 # Cost of the use of the jammer
         super().__init__(X, Y, self.name)
 
 

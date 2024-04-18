@@ -84,6 +84,7 @@ class sensor_iads:
         detection_range = ((from_dB(self.Pt) * from_dB(self.G) ** 2 * aircraft.rcs * from_dB(self.l) ** 2)
                            / ((4 * np.pi) ** 3 * from_dB(self.L) * from_dB(self.F) * 1.38e-23 * self.Br
                               + self.jamming_power(aircraft, alpha))) ** 0.25 / 1000
+        # The equation comes from: Wang, Q. and Yao, D. (2017). Research on Electronic Jamming Airspace Planning. 2017 International Conference on Computer Technology, Electronics and Communication (ICCTEC). doi:https://doi.org/10.1109/icctec.2017.00180.
         return detection_range
 
     # Calculates the jamming power needed to determine the detection range
