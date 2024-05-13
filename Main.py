@@ -99,10 +99,10 @@ radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
 radar3 = sensor_iads(650, 550)
 radar4 = sensor_iads(550, 650)
-# radar5 = sensor_iads(600, 750)
-# radar6 = sensor_iads(700, 850)
+radar5 = sensor_iads(600, 750)
+radar6 = sensor_iads(700, 850)
 
-ga = MultiObjGeneticAlgorithm(0, 300, 5, striker, 2, 50, 0.2, 0.9)
+ga = MultiObjGeneticAlgorithm(0, 300, 8, striker, 2, 75, 0.2, 0.9)
 
 first_front, length, first_time, first_front_history = ga.run(50)
 
