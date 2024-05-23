@@ -1,8 +1,8 @@
 import numpy as np
 
-from SEAD_v2.Assets import *
-from SEAD_v2.Optimise.Safe_corridor.Corridor_width_v2 import *
-from SEAD_v2.Optimise.Safe_corridor import *
+from Assets import *
+from Optimise.Safe_corridor.Corridor_width_v2 import *
+from Optimise.Safe_corridor import *
 import random
 from scipy.stats.qmc import LatinHypercube
 
