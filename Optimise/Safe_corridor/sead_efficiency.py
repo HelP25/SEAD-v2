@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from tabulate import tabulate
-from SEAD_v2.Optimise.Safe_corridor import *
-from SEAD_v2.Assets import *
+from Optimise.Safe_corridor import *
+from Assets import *
 
 def results_analysis(ga, first_front, length, first_time, first_front_history, striker):
     print(f"First time that we have a good solution: {first_time}")
