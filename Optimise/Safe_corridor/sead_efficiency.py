@@ -1,7 +1,7 @@
 import numpy as np
 
-from SEAD_v2.Assets import *
-from SEAD_v2.Optimise.Safe_corridor import *
+from Assets import *
+from Optimise.Safe_corridor import *
 
 def assessment(algo, solution):
     """
