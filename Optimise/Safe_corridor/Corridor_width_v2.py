@@ -1,7 +1,7 @@
 from shapely.geometry import Polygon, MultiPolygon, LineString, Point
 from shapely.ops import unary_union
 
-from SEAD_v2.Assets import *
+from Assets import *
 
 
 def find_corridor(aircraft_secured, security_width):
