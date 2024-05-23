@@ -30,7 +30,7 @@ class SingleObjGeneticAlgorithm:
         '''
 
         # Creation of the borders within the individuals are generated
-        maxX = max([radar.X for radar in sensor_iads.list])
+        maxX = max([radar.X for radar in sensor_iads.list]) + sensor_iads.list[0].get_detection_range(self.aircraft_secured)
         maxY = max([radar.Y for radar in sensor_iads.list])
         minY = min([radar.Y for radar in sensor_iads.list])
 

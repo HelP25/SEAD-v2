@@ -63,7 +63,7 @@ print(corridor_width(striker, 2))
 """
 
 #  Test Single objective
-"""
+'''
 striker = aircraft(200, 302)
 radar1 = sensor_iads(600, 300)
 radar2 = sensor_iads(700, 400)
@@ -88,10 +88,10 @@ for radar in sensor_iads.list:
     print(f'{radar.name} is targeted by {[jammer.name for jammer in radar.jammers_targeting]}')
 print(f"The fitness is equal to : {fitness}")
 
-plt.legend()
+
 plt.show()
 
-"""
+'''
 #  Test Multi objective
 
 striker = aircraft(200, 302)
@@ -107,5 +107,3 @@ ga = MultiObjGeneticAlgorithm(0, 300, 8, striker, 2, 75, 0.2, 0.9)
 first_front, length, first_time, first_front_history = ga.run(50)
 
 results_analysis(ga, first_front, length, first_time, first_front_history, striker)
-
-

@@ -43,7 +43,7 @@ class aircraft:
 
 
 class Jammer(aircraft):
-    #Physical caracteristics
+    #Physical characteristics
     Gj = 3  # Gain of the antenna
     Lj = 3  # Loss of the antenna
     Pj = 1  # Power of the jamming antenna
@@ -58,7 +58,7 @@ class Jammer(aircraft):
 
 
 class Weasel(aircraft):
-    #Physical caracteristics
+    #Physical characteristics
     nb_missiles = 4
     power_missiles = 2
     list = []

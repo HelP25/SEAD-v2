@@ -7,9 +7,9 @@ def from_dB(G):  # Definition of a function to convert from dB to whatever unit
     return 10 ** (G / 10)
 
 
-# Creation of the different assets in the battlespace
+# Creation of the different assets in the battle space
 class sensor_iads:
-    # Physical caracteristics
+    # Physical characteristics
     G = 33.6  # gain
     F = 7  # noise
     L = 8  # loss
@@ -44,7 +44,7 @@ class sensor_iads:
     def targeted_by(self, jammers):
         self.jammers_targeting = jammers.copy() # The jammers targeting the radar are put in the jammers_targeting list
         for jammer in jammers:
-            jammer.targets(self)    # Also, to every jammer is allocated one radar that it targets
+            jammer.targets(self)    # Also, to every jammer is allocated the radar that it targets
 
 
     # Calculates the distance between an asset and the radar
