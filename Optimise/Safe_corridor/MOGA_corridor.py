@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
-from SEAD_v2.Assets import *
-from SEAD_v2.Optimise.Safe_corridor import *
+from Assets import *
+from Optimise.Safe_corridor import *
 import random
 from scipy.stats.qmc import LatinHypercube
 
