@@ -1,1 +1,1 @@
-from SEAD_v2.Optimise.Safe_corridor import *
+from Optimise.Safe_corridor import *
