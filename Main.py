@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from tabulate import tabulate
-from SEAD_v2.Optimise import *
-from SEAD_v2.Assets import *
+from Optimise import *
+from Assets import *
 
 plt.close('all')
 
